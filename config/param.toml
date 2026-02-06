@@ -1,0 +1,20 @@
+title = "device_config"
+
+[color_camera_config]
+color_camera = "/dev/video2"  
+colors = ["red","blue","green","white","black"]
+
+hsv_red   = [0, 0, 0]
+hsv_blue  = [0, 0, 0]
+hsv_green = [0, 0, 0]
+hsv_white = [0, 0, 0]
+hsv_black = [0, 0, 0]
+
+[qr_camera_config]
+qr_camera  = "/dev/video2"
+
+[cross_camera_config]
+cross_camera = "/dev/video2"
+
+[gpio_config]
+pin = ["nothing"]
