@@ -1,0 +1,9 @@
+[package]
+name = "car_cv"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = "1"
+opencv = "0.75"
+toml = "0.9.11"
