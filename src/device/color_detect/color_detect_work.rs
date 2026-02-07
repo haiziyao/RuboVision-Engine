@@ -1,14 +1,12 @@
-use crate::{config::{self, device_config::ColorCameraConfig}, device::camera};
+use crate::{config::device_config::ColorCameraConfig, device::camera};
 use crate::device::color_detect::color_detect_utils::{roi_circle_mask,hsv_inrange,
 hsv_scalar_factory};
-use anyhow::{Result, bail};
+use anyhow::Result;
 use opencv::{
-    core::{self, Mat, Rect, Scalar},
+    core::{self, Mat, Scalar},
     highgui,
     imgproc,
     prelude::*,
-    types,
-    videoio,
 };
 
 
@@ -16,23 +14,18 @@ pub fn work(config: ColorCameraConfig,state:bool) -> Result<()> {
 
     let mut cam = camera::register_color_camera(config.clone())?;
 
-    if state {  // TODO: 迟早state也封装进去
-        highgui::named_window("color_detect", highgui::WINDOW_AUTOSIZE)?;
-    }
-     
-
     loop {
         let mut frame = core::Mat::default();
         cam.read(&mut frame)?;
         if frame.empty() {continue;}
         
         let rate =  0.8;  // TODO: 封装进去config
-        let (roi, circle_mask) = roi_circle_mask(&frame, rate)?;
+        let (_roi, circle_mask) = roi_circle_mask(&frame, rate)?;
  
         let (color_name, ratio) = detect_color_in_circle_mask(&frame, &circle_mask, &config)?;
 
 
-        if state {
+        if state {// TODO: 迟早state也封装进去
             // 画出圆形 ROI
             let size = frame.size()?;
             let w = size.width;
@@ -55,6 +48,10 @@ pub fn work(config: ColorCameraConfig,state:bool) -> Result<()> {
             draw_label(&mut frame, &label, 10, 30)?;
 
             highgui::imshow("color_detect", &frame)?;
+            let key = highgui::wait_key(1)?;
+            if key == 113 || key == 27 {
+                break; // q / esc
+            }
         }
     }
 

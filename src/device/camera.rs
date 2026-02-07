@@ -3,7 +3,6 @@ use crate::config::device_config::{ColorCameraConfig,QrCameraConfig};
 
 use anyhow::{Ok, Result};  
 use opencv::{
-    prelude::*,
     videoio,
     highgui
 }; 
@@ -16,7 +15,7 @@ pub fn register_color_camera(config:ColorCameraConfig) -> Result<videoio::VideoC
     // Open a GUI window
     highgui::named_window("window", highgui::WINDOW_FULLSCREEN)?;
     // Open the web-camera (assuming you have one)
-    let mut cam = videoio::VideoCapture::from_file(&camera_filename, videoio::CAP_V4L2)?;
+    let cam = videoio::VideoCapture::from_file(&camera_filename, videoio::CAP_V4L2)?;
     Ok(cam)
 }
 
@@ -26,7 +25,7 @@ pub fn register_qr_camera(config:QrCameraConfig)-> Result<videoio::VideoCapture>
     // Open a GUI window
     highgui::named_window("window", highgui::WINDOW_FULLSCREEN)?;
     // Open the web-camera (assuming you have one)
-    let mut cam = videoio::VideoCapture::from_file(&camera_filename, videoio::CAP_V4L2)?;
+    let cam = videoio::VideoCapture::from_file(&camera_filename, videoio::CAP_V4L2)?;
     Ok(cam)
 }
 

@@ -1,8 +1,10 @@
+#![cfg(test)]
+#![allow(unused_imports)]
+
+
 use anyhow::{Result, bail};
 use opencv::{core, highgui, imgproc, prelude::*, videoio};
-
 use crate::device::color_detect::color_detect_utils::{roi_circle_mask,hsv_inrange};
-
 
 
 #[test]
