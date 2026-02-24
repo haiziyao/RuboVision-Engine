@@ -50,3 +50,18 @@
 
 #### GPIO
 这里主要是和电控联调，后期可能有许多通用函数
+
+
+``` bash
+#树莓派5采用debin13，所以各种镜像站的速度极慢，推荐用电脑热点走代理
+# 安装openCV,-E表示不清空代理配置 
+sudo -E apt install -y libopencv-dev pkg-config
+# 安装rust
+curl https://sh.rustup.rs -sSf | sh
+source $HOME/.cargo/env
+rustc -V
+cargo -V
+
+sudo apt install -y clang libclang-dev llvm pkg-config cmake build-essential
+
+```
