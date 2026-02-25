@@ -3,7 +3,7 @@ title = "device_config"
 [color_camera_config]
 color_camera = "/dev/video0"
 
-debug_model = true
+debug_model = false
 loop_count = 10
 radius_ratio = 0.8  # ROI圆直径 占用整个相机试图的比例
 detect_area_access_rate = 0.8  # 面积占比低于这个值直接返回unknow
@@ -19,14 +19,14 @@ hsv_white = [0, 170, 0, 55,120,255]
 
 [qr_camera_config]
 qr_camera  = "/dev/video4"
-debug_model = true
+debug_model = false
 
 
 [cross_camera_config]
 cross_camera = "/dev/video2"
 
 [gpio_config]
-serial = " "
+serial = "dev/serial0"
 
 baud = 115200   # or 9600
 data_bit = 8
