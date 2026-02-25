@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use anyhow::{ Result};
 use crate::config::device_config::{GpioConfig, LightConfig};
 use rppal::uart::{Uart,Parity,Queue};
@@ -17,6 +18,7 @@ pub fn send_line(uart:&mut Uart, s: &str) ->Result<()> {
     Ok(())
 }
 
+ 
 pub fn receive_line(uart:&mut Uart) ->Result<()>{
     let mut buffer = [0u8;4];
     uart.read(&mut buffer)?;

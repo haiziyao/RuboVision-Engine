@@ -1,6 +1,7 @@
 //! 配置模块
 //!
 //! 负责读取并解析 `config/param.toml`
+#![allow(dead_code)]
 
 use anyhow::{Context, Result};
 use serde::Deserialize;
@@ -9,7 +10,6 @@ use std::fs;
 #[derive(Debug, Deserialize, Clone)]
 pub struct DeviceConfig {
     pub title: String,
-
     pub color_camera_config: ColorCameraConfig,
     pub qr_camera_config: QrCameraConfig,
     pub cross_camera_config: CrossCameraConfig,
@@ -38,6 +38,7 @@ pub struct QrCameraConfig {
     pub debug_model:bool,
 }
 
+ 
 #[derive(Debug, Deserialize, Clone)]
 pub struct CrossCameraConfig {
     pub cross_camera: String,

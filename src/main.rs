@@ -1,15 +1,18 @@
-use car_cv::config::config_cli::register_config_cli;
-use car_cv::{device::qr_detect::qr_detect_work, utils::device_config_util::get_config};
-use car_cv::device::color_detect::color_detect_work;
+mod config;
+mod device;
+mod utils;
+
+use crate::config::config_cli::register_config_cli;
+use crate::{device::qr_detect::qr_detect_work, utils::device_config_util::get_config};
+use crate::device::color_detect::color_detect_work;
 use anyhow::{Result};
 use std::sync::mpsc;
 use std::thread;
-use car_cv::device::gpio::gpio_work::{receive_line_loop,register_gpio,send_line,register_lights};
-
-
+use crate::device::gpio::gpio_work::{receive_line_loop,register_gpio,send_line,register_lights};
+ 
 fn main() -> Result<()> {
     // 命令行给参
-    register_config_cli()?;
+    let _ = register_config_cli()?;
     // 读取配置
     let my_config = get_config()?; 
     let (gpio_config,qr_config,color_config,light_config) = 
