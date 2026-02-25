@@ -3,6 +3,23 @@
 version = 4
 
 [[package]]
+name = "RuboVision-Hardbind"
+version = "1.0.0"
+dependencies = [
+ "anyhow",
+ "clap",
+ "colored",
+ "opencv",
+ "quircs",
+ "rppal",
+ "serde",
+ "serialport",
+ "thread",
+ "toml",
+ "toml_edit",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "1.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -84,23 +101,6 @@ name = "bitflags"
 version = "2.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "843867be96c8daad0d758b57df9392b6d8d271134fce549de6ce169ff98a92af"
-
-[[package]]
-name = "car_cv"
-version = "1.0.0"
-dependencies = [
- "anyhow",
- "clap",
- "colored",
- "opencv",
- "quircs",
- "rppal",
- "serde",
- "serialport",
- "thread",
- "toml",
- "toml_edit",
-]
 
 [[package]]
 name = "cc"
