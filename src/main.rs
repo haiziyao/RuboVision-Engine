@@ -1,3 +1,4 @@
+use car_cv::config::config_cli::register_config_cli;
 use car_cv::{device::qr_detect::qr_detect_work, utils::device_config_util::get_config};
 use car_cv::device::color_detect::color_detect_work;
 use anyhow::{Result};
@@ -7,20 +8,23 @@ use car_cv::device::gpio::gpio_work::{receive_line_loop,register_gpio,send_line,
 
 
 fn main() -> Result<()> {
+    // 命令行给参
+    register_config_cli()?;
+    // 读取配置
     let my_config = get_config()?; 
     let (gpio_config,qr_config,color_config,light_config) = 
     (my_config.gpio_config,my_config.qr_camera_config,my_config.color_camera_config, my_config.light_config);
-    
     let gpio_config_main = gpio_config.clone();
     
 
-
+    // 建立一个消息隧道，独立线程接收消息
     let (tx, rx) = mpsc::channel();
     let handle = thread::spawn(move || {
         let mut uart = register_gpio(gpio_config).expect("Failed to initialize UART");
         receive_line_loop(&mut uart, tx).expect("Failed to receive data");
     });
 
+    // 处理消息
     let mut uart = register_gpio(gpio_config_main).expect("Failed to initialize UART");
     let (mut color_pin,mut qr_pin,mut gpio_pin) = register_lights(light_config)?;
     loop {

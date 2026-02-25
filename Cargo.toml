@@ -12,3 +12,8 @@ quircs = "0.10"
 rppal = "0.22.1"
 serialport = "4.8.1"
 thread = "0.0.1"
+toml_edit = "0.25.3"
+clap = { version = "4.5.60", features = ["derive"] }
+colored = "3.1.1"
+ 
+

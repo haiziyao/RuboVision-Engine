@@ -21,7 +21,6 @@ pub struct DeviceConfig {
 pub struct ColorCameraConfig {
     pub color_camera: String,
     pub debug_model:bool,
-    pub loop_model:bool,
     pub loop_count:i32,
     pub radius_ratio:f64,
     pub detect_area_access_rate:f64,
