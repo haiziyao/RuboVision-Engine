@@ -1,6 +1,11 @@
 ## RuboVision Engine
 ### 项目简介
 2026 RoboCup车型竞技机器人视觉组代码。部署在树莓派5的 Rust + OpenCV项目。集成颜色识别，二维码识别，GPIO状态灯，UART串口通信，cross检测。
+### 功能概述
+* 基于ROI的颜色识别：适用于摄像头固定在夹爪上这种情况，有效避免了杂乱环境的影响
+* 基于quircs库的二维码解码: 多数openCV版本不带二维码解码库，为方便维护，使用Rust Crate
+* 基于rappl的uart: 进行串口通信
+* 基于rappel的指示灯: 清晰表明工作状态
 
 ### 项目版本简介
 本项目维护有两个大的子版本偶系列和奇系列，此外还有仅供参考的0系列。
@@ -120,7 +125,7 @@ cargo run -- -k color_cam qr_cam -v /dev/video0 /dev/video4
 # "serial"    => Some(("gpio_config", "serial"))
 ```
 
-### 功能概述
+### 功能详述
 #### 颜色识别
 其实，如果是对于一般的颜色识别，对于`如何排除环境干扰`是极其复杂的。
 
