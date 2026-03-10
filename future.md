@@ -6,7 +6,7 @@
 
 - [X] 基础实现验证：实现最基本的`设备register`,`功能实现`,`config配置`,`mpsc消息传递`
 - [ ] 重构项目组织: 将不同功能彻底解耦，分为多个独立crate(暂定)，架构方面下面会具体阐述
-- [ ] 动态代理技术: 真正彻底实现`device`和`job`解耦，如：摄像头A不只局限于`color_detect`这一单一任务，赋予A执行不同功能的权利，利用`所有权的借用`实现管理。当然，还有其他方法，具体阐述见下
+- [ ] 动态分发理技术: 真正彻底实现`device`和`job`解耦，如：摄像头A不只局限于`color_detect`这一单一任务，赋予A执行不同功能的权利，利用`所有权的借用`实现管理。当然，还有其他方法，具体阐述见下
 - [ ] web端调试界面: 提供一个可选的web界面便于调试，功能难点:如何实时传输调试数据以及web可插拔
 - [ ] 需求函数接口与实现: 调研各种竞赛所包含的功能，并进行封装
 - [ ] 多重config: 提供`配置文件`,`命令行参数启动`, `web界面调试` 
@@ -14,6 +14,26 @@
 
 ### 底层架构介绍
 
+``` md
+[Source]
+  ├─ UartSource
+  ├─ LoopSource
+  ├─ TimerSource
+  └─ WebSource
+        │
+        ▼
+mpsc::Sender<TaskMessage>
+        │
+        ▼
+[Scheduler]
+        │
+        ▼
+BindingTable(task_id -> Binding)
+        │
+        ▼
+dispatch_task(camera, func)
+
+```
 #### 多主+异步多线程
 这里我从程序启动流程开始介绍：
 * mian启动开始读取配置文件得到config，并创建共享Box，传入线程
@@ -27,15 +47,61 @@
 * 上面的配置刚好是四个线程，mian+3个子线程。所以我们写一些函数的时候尽量不要搞异步＋异步，容易降低效率。
 * 在一些函数功能上面，我们可以随便加，比如，我们对于颜色检测这样的一个东西，收到消息之后，我们直接开10个线程去进行颜色检测，但是！这样真的好吗？我觉得这个是一个玄学，颜色检测只要检测到几乎就是对的，emmm跑题了这里不说那么多。反正就是并行和异步是哲学，怎么用我也不知道。。。
 
-#### 
+#### 动态分发
+基于下面这个函数实现，在调用功能时候，需要同时传入摄像头和功能函数
+``` rust
+dispatch_task(cam: &mut cv::Camera, task: func);
+
+
+type TaskFn = fn(&mut Camera) -> TaskResult;
+fn dispatch_task(cam: &mut Camera, task: TaskFn) -> TaskResult {
+    task(cam)
+}
+```
   
  
 
 #### config配置
 本来使用的是toml库，但是我觉得可能config库更通用，因为有些人喜欢使用`yaml` `xml`
 
-#### mpsc
-我们这里主要用的是消息传递这样一个功能，其实算是 spsc(single producer single consumer)
+* 系统层面不限制设备与任务的绑定关系，任何任务都可通过配置绑定到任意摄像头；至于该绑定是否适合实际场景，由配置者自行保证。
+
+  ``` rust
+  [[bindings]]
+  task_id = "task_color"
+  gpio_char = "a1"
+  cam = "color_camera"
+  func = "color_detect"
+  enable = true 
+
+  [[bindings]]
+  task_id = "task_qr"
+  source_code = "b1"
+  cam_id = "qr_camera"
+  task_func = "qr_detect"
+  ```
+
+#### 多来源->单调度器
+
+``` md 
+UART Source   ─┐
+Loop Source   ─┼──> mpsc Sender<TaskMessage> ───> Scheduler / Worker
+Timer Source  ─┤
+Web Source    ─┘
+```
+
+``` rust
+trait EventSource {
+    fn start(self, tx: std::sync::mpsc::Sender<TaskMessage>);
+}
+
+enum TaskMessage {
+    RunTask {
+        task_id: String,
+    },
+    Shutdown,
+}
+```
 
 #### 借用管道
 设备通过`借用管道`一层层进入我们想要他进行的功能，设备一直在`管道`中流通
