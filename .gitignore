@@ -1,1 +1,18 @@
-/target
+/target/
+/logs/
+/.idea/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+
+# Rust / tooling
+Cargo.lock
+*.pdb
+
+# Local env / overrides
+.env
+.env.*
+*.local
