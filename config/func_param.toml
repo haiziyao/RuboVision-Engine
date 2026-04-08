@@ -1,0 +1,15 @@
+[[func_param_config.func_param_list]]
+function_id = "uart_func"
+args = ["a", "b"]
+
+[[func_param_config.func_param_list]]
+function_id = "timer_func"
+args = ["x", "y", "z"]
+
+[[func_param_config.func_param_list]]
+function_id = "loop_func"
+args = ["a", "b"]
+
+[[func_param_config.func_param_list]]
+function_id = "web_func"
+args = ["x", "y", "z"]

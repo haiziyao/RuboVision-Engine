@@ -1,0 +1,19 @@
+[[device_param_config.device_param_list]]
+device_id = "uart_device"
+kind = "None"
+args = ["/dev1"]
+
+[[device_param_config.device_param_list]]
+device_id = "timer_device"
+kind = "None"
+args = ["/dev2"]
+
+[[device_param_config.device_param_list]]
+device_id = "loop_device"
+kind = "None"
+args = ["/dev1"]
+
+[[device_param_config.device_param_list]]
+device_id = "web_device"
+kind = "None"
+args = ["/dev2"]

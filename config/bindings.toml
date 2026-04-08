@@ -1,0 +1,30 @@
+# uart_source: Vec<UartBinding>
+[[bindings.uart_source]]
+task_id = "uart_default"
+source_key = "uart_rx"
+device_id = "uart_device"
+function_id = "uart_func"
+
+
+# timer_source: Vec<TimerBinding>
+[[bindings.timer_source]]
+task_id = "timer_default"
+source_key = "timer_1s"
+device_id = "timer_device"
+function_id = "timer_func"
+
+
+# loop_source: Vec<LoopBinding>
+[[bindings.loop_source]]
+task_id = "loop_default"
+source_key = "main_loop"
+device_id = "loop_device"
+function_id = "loop_func"
+
+
+# web_source: Vec<WebBinding>
+[[bindings.web_source]]
+task_id = "web_default"
+source_key = "http_api"
+device_id = "web_device"
+function_id = "web_func"

@@ -1,0 +1,4 @@
+app:
+  name: rubovision
+  profile: dev
+  log_level: info

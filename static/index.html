@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>RuboVision Message Panel</title>
+    <style>
+        :root {
+            color-scheme: light;
+            font-family: "Segoe UI", "PingFang SC", sans-serif;
+            background: #edf3f8;
+            color: #17212b;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background: linear-gradient(180deg, #f7fafc 0%, #edf3f8 100%);
+        }
+
+        .page {
+            max-width: 1160px;
+            margin: 0 auto;
+            padding: 28px 18px 40px;
+        }
+
+        .hero {
+            margin-bottom: 18px;
+        }
+
+        .hero h1 {
+            margin: 0 0 8px;
+            font-size: 34px;
+            letter-spacing: 0.02em;
+        }
+
+        .hero p {
+            margin: 0;
+            color: #5e6d7b;
+            line-height: 1.65;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.9fr);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .panel {
+            background: #fff;
+            border: 1px solid #d8e2eb;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 18px 48px rgba(23, 33, 43, 0.08);
+        }
+
+        .panel h2 {
+            margin: 0 0 16px;
+            font-size: 17px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: 96px 1fr;
+            gap: 10px 14px;
+            align-items: start;
+        }
+
+        .key {
+            color: #647381;
+            font-size: 14px;
+        }
+
+        .value {
+            min-height: 22px;
+            word-break: break-word;
+            font-family: Consolas, "Courier New", monospace;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 64px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 13px;
+            font-weight: 700;
+            background: #d9e8f7;
+            color: #164672;
+        }
+
+        .badge.warn {
+            background: #fff1cc;
+            color: #8b5a00;
+        }
+
+        .badge.error {
+            background: #fde1e1;
+            color: #912b2b;
+        }
+
+        .meta {
+            margin-top: 14px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            color: #667585;
+            font-size: 13px;
+        }
+
+        .metrics {
+            margin-top: 16px;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+        }
+
+        .metric-card {
+            border: 1px solid #dde6ee;
+            background: #fbfcfd;
+            border-radius: 12px;
+            padding: 12px;
+        }
+
+        .metric-label {
+            margin-bottom: 8px;
+            color: #667585;
+            font-size: 12px;
+        }
+
+        .metric-value {
+            font-size: 26px;
+            font-weight: 700;
+            font-family: Consolas, "Courier New", monospace;
+        }
+
+        .image-box {
+            margin-top: 16px;
+            border: 1px dashed #c7d2dc;
+            border-radius: 12px;
+            background: #fafcfe;
+            padding: 12px;
+        }
+
+        .image-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 160px;
+            color: #7a8793;
+            font-size: 14px;
+            text-align: center;
+        }
+
+        .image-frame {
+            display: none;
+        }
+
+        .image-frame.active {
+            display: block;
+        }
+
+        .image-frame img {
+            width: 100%;
+            max-height: 420px;
+            object-fit: contain;
+            display: block;
+            border-radius: 10px;
+            background: #eef3f7;
+        }
+
+        .image-tip {
+            margin-top: 10px;
+            color: #73808d;
+            font-size: 12px;
+            font-family: Consolas, "Courier New", monospace;
+            word-break: break-all;
+        }
+
+        .toolbar {
+            margin-top: 16px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        button {
+            border: 1px solid #23415b;
+            background: #23415b;
+            color: #fff;
+            border-radius: 10px;
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        button.secondary {
+            background: #fff;
+            color: #23415b;
+        }
+
+        button.danger {
+            background: #9b3434;
+            border-color: #9b3434;
+        }
+
+        button:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+
+        .history-head {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .history-head small {
+            color: #667585;
+        }
+
+        .history-list {
+            display: grid;
+            gap: 10px;
+            max-height: 760px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .history-item {
+            border: 1px solid #dde6ee;
+            border-radius: 12px;
+            padding: 12px;
+            background: #fbfcfd;
+        }
+
+        .history-top {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .history-text {
+            margin: 0;
+            line-height: 1.5;
+            color: #1b2834;
+            word-break: break-word;
+        }
+
+        .history-time {
+            color: #73808d;
+            font-size: 12px;
+            font-family: Consolas, "Courier New", monospace;
+            white-space: nowrap;
+        }
+
+        .history-tag {
+            margin-top: 8px;
+            color: #667585;
+            font-size: 12px;
+            font-family: Consolas, "Courier New", monospace;
+        }
+
+        .history-image {
+            width: 100%;
+            max-height: 170px;
+            object-fit: contain;
+            display: block;
+            margin-top: 10px;
+            border: 1px solid #dde6ee;
+            border-radius: 8px;
+            background: #eef3f7;
+        }
+
+        @media (max-width: 920px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .metrics {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 560px) {
+            .metrics {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+<main class="page">
+    <section class="hero">
+        <h1>RuboVision Message Panel</h1>
+        <p>首页轮询 <code>/message</code>。`204` 只计入空消息，不进入历史；只有有效消息会保留在右侧历史记录。</p>
+    </section>
+
+    <section class="grid">
+        <article class="panel">
+            <h2>Current Message</h2>
+            <div class="status-grid">
+                <div class="key">状态码</div>
+                <div class="value"><span id="code-badge" class="badge">--</span></div>
+
+                <div class="key">文字信息</div>
+                <div class="value" id="text">等待消息...</div>
+
+                <div class="key">图片状态</div>
+                <div class="value" id="image-state">暂无图片</div>
+            </div>
+
+            <div class="meta">
+                <span>轮询间隔：<strong>800ms</strong></span>
+                <span>历史上限：<strong>20</strong></span>
+                <span>接口：<code>/message</code></span>
+                <span>轮询状态：<strong id="polling-state">已停止</strong></span>
+            </div>
+
+            <div class="metrics">
+                <div class="metric-card">
+                    <div class="metric-label">请求总数</div>
+                    <div class="metric-value" id="request-count">0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">空消息数 (204)</div>
+                    <div class="metric-value" id="empty-count">0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">无效请求数</div>
+                    <div class="metric-value" id="invalid-count">0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">有效记录数</div>
+                    <div class="metric-value" id="valid-count">0</div>
+                </div>
+            </div>
+
+            <div class="image-box">
+                <div id="image-empty" class="image-empty">当前消息没有图片</div>
+                <div id="image-frame" class="image-frame">
+                    <img id="image" alt="message image">
+                    <div id="image-tip" class="image-tip">等待图片数据</div>
+                </div>
+            </div>
+
+            <div class="toolbar">
+                <button id="start-polling">开始请求</button>
+                <button id="stop-polling" class="danger">停止请求</button>
+                <button id="refresh-now">立即请求一次</button>
+                <button id="clear-history" class="secondary">清空记录</button>
+            </div>
+        </article>
+
+        <article class="panel">
+            <div class="history-head">
+                <h2>Recent Messages</h2>
+                <small>最多保留 20 条有效消息</small>
+            </div>
+            <div id="history" class="history-list">
+                <div class="history-item">
+                    <p class="history-text">暂无有效记录</p>
+                </div>
+            </div>
+        </article>
+    </section>
+</main>
+
+<script>
+    const MAX_HISTORY = 20;
+    const POLL_INTERVAL_MS = 800;
+    const historyItems = [];
+
+    let totalRequestCount = 0;
+    let emptyMessageCount = 0;
+    let invalidRequestCount = 0;
+    let pollingEnabled = false;
+    let pollTimer = null;
+    let requestInFlight = false;
+
+    const codeBadge = document.getElementById('code-badge');
+    const textNode = document.getElementById('text');
+    const imageNode = document.getElementById('image');
+    const imageEmptyNode = document.getElementById('image-empty');
+    const imageFrameNode = document.getElementById('image-frame');
+    const imageStateNode = document.getElementById('image-state');
+    const imageTipNode = document.getElementById('image-tip');
+
+    const requestCountNode = document.getElementById('request-count');
+    const emptyCountNode = document.getElementById('empty-count');
+    const invalidCountNode = document.getElementById('invalid-count');
+    const validCountNode = document.getElementById('valid-count');
+    const pollingStateNode = document.getElementById('polling-state');
+    const historyNode = document.getElementById('history');
+
+    const startPollingButton = document.getElementById('start-polling');
+    const stopPollingButton = document.getElementById('stop-polling');
+    const refreshNowButton = document.getElementById('refresh-now');
+    const clearHistoryButton = document.getElementById('clear-history');
+
+    function badgeClass(code) {
+        if (code >= 500) return 'badge error';
+        if (code >= 400 || code === 204) return 'badge warn';
+        return 'badge';
+    }
+
+    function nowString() {
+        return new Date().toLocaleTimeString('zh-CN', { hour12: false });
+    }
+
+    function summarizeImage(image) {
+        if (!image) return '无';
+        if (image.startsWith('data:image/')) {
+            return image.slice(0, 56) + '...';
+        }
+        return image;
+    }
+
+    function isEmptyMessage(data) {
+        return Number(data?.code ?? 0) === 204;
+    }
+
+    function isValidMessage(data) {
+        if (!data || typeof data !== 'object') return false;
+        const code = Number(data.code ?? 0);
+        const text = typeof data.text === 'string' ? data.text.trim() : '';
+        return Number.isFinite(code) && code >= 200 && code < 300 && code !== 204 && text.length > 0;
+    }
+
+    function updateCounters() {
+        requestCountNode.textContent = String(totalRequestCount);
+        emptyCountNode.textContent = String(emptyMessageCount);
+        invalidCountNode.textContent = String(invalidRequestCount);
+        validCountNode.textContent = String(historyItems.length);
+        pollingStateNode.textContent = pollingEnabled ? '运行中' : '已停止';
+        startPollingButton.disabled = pollingEnabled;
+        stopPollingButton.disabled = !pollingEnabled;
+    }
+
+    function setImage(data) {
+        if (data.image) {
+            imageNode.src = data.image;
+            imageFrameNode.classList.add('active');
+            imageEmptyNode.style.display = 'none';
+            imageStateNode.textContent = data.image.startsWith('data:image/') ? 'base64/data URL 图片' : '普通图片路径';
+            imageTipNode.textContent = summarizeImage(data.image);
+        } else {
+            imageNode.removeAttribute('src');
+            imageFrameNode.classList.remove('active');
+            imageEmptyNode.style.display = 'flex';
+            imageStateNode.textContent = '暂无图片';
+            imageTipNode.textContent = '等待图片数据';
+        }
+    }
+
+    function updateCurrentMessage(data) {
+        const code = Number(data.code ?? 0);
+        codeBadge.textContent = String(code || '--');
+        codeBadge.className = badgeClass(code);
+        textNode.textContent = data.text ?? '';
+        setImage(data);
+    }
+
+    function pushHistory(data) {
+        historyItems.unshift({
+            code: data.code ?? 0,
+            text: data.text ?? '',
+            image: data.image ?? null,
+            time: nowString(),
+        });
+
+        if (historyItems.length > MAX_HISTORY) {
+            historyItems.length = MAX_HISTORY;
+        }
+
+        renderHistory();
+        updateCounters();
+    }
+
+    function renderHistory() {
+        if (!historyItems.length) {
+            historyNode.innerHTML = `
+          <div class="history-item">
+            <p class="history-text">暂无有效记录</p>
+          </div>
+        `;
+            return;
+        }
+
+        historyNode.innerHTML = historyItems.map(item => {
+            const imageBlock = item.image
+                ? `<img class="history-image" alt="history image" src="${escapeAttribute(item.image)}">`
+                : '';
+
+            return `
+          <div class="history-item">
+            <div class="history-top">
+              <span class="${badgeClass(Number(item.code))}">${escapeHtml(String(item.code))}</span>
+              <span class="history-time">${escapeHtml(item.time)}</span>
+            </div>
+            <p class="history-text">${escapeHtml(item.text)}</p>
+            <div class="history-tag">image=${item.image ? 'yes' : 'no'}</div>
+            ${imageBlock}
+          </div>
+        `;
+        }).join('');
+    }
+
+    async function requestMessage() {
+        totalRequestCount += 1;
+        updateCounters();
+        const response = await fetch('/message', { cache: 'no-store' });
+        return await response.json();
+    }
+
+    function scheduleNextPoll() {
+        if (!pollingEnabled) return;
+        pollTimer = setTimeout(pollMessage, POLL_INTERVAL_MS);
+    }
+
+    async function handleOneRequest() {
+        const data = await requestMessage();
+        updateCurrentMessage(data);
+
+        if (isEmptyMessage(data)) {
+            emptyMessageCount += 1;
+            updateCounters();
+            return;
+        }
+
+        if (isValidMessage(data)) {
+            pushHistory(data);
+            return;
+        }
+
+        invalidRequestCount += 1;
+        updateCounters();
+    }
+
+    async function pollMessage() {
+        if (!pollingEnabled || requestInFlight) {
+            scheduleNextPoll();
+            return;
+        }
+
+        requestInFlight = true;
+        try {
+            await handleOneRequest();
+        } catch (error) {
+            invalidRequestCount += 1;
+            updateCurrentMessage({
+                code: 500,
+                text: `request failed: ${error}`,
+                image: null,
+            });
+            updateCounters();
+        } finally {
+            requestInFlight = false;
+            scheduleNextPoll();
+        }
+    }
+
+    async function fetchOnce() {
+        if (requestInFlight) return;
+        requestInFlight = true;
+        try {
+            await handleOneRequest();
+        } catch (error) {
+            invalidRequestCount += 1;
+            updateCurrentMessage({
+                code: 500,
+                text: `request failed: ${error}`,
+                image: null,
+            });
+            updateCounters();
+        } finally {
+            requestInFlight = false;
+        }
+    }
+
+    function startPolling() {
+        if (pollingEnabled) return;
+        pollingEnabled = true;
+        updateCounters();
+        pollMessage();
+    }
+
+    function stopPolling() {
+        pollingEnabled = false;
+        if (pollTimer) {
+            clearTimeout(pollTimer);
+            pollTimer = null;
+        }
+        updateCounters();
+    }
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;');
+    }
+
+    function escapeAttribute(value) {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#39;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;');
+    }
+
+    startPollingButton.addEventListener('click', startPolling);
+    stopPollingButton.addEventListener('click', stopPolling);
+    refreshNowButton.addEventListener('click', fetchOnce);
+    clearHistoryButton.addEventListener('click', () => {
+        historyItems.length = 0;
+        renderHistory();
+        updateCounters();
+    });
+
+    renderHistory();
+    updateCounters();
+</script>
+</body>
+</html>
