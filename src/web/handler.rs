@@ -1,4 +1,4 @@
-use axum::extract::State;
+﻿use axum::extract::State;
 use axum::http::StatusCode;
 use axum::response::{Html, IntoResponse};
 use axum::Json;
@@ -6,7 +6,6 @@ use log::{debug, info};
 use super::model::WebMessage;
 use super::state::WebState;
 use crate::embed::Assets;
-
 
 pub async fn index() -> impl IntoResponse {
     info!("Index getting started");
@@ -16,21 +15,22 @@ pub async fn index() -> impl IntoResponse {
     }
 }
 
-
 pub async fn message(State(state): State<WebState>) -> impl IntoResponse {
-    let mut rx = state.rx.lock().await;
-    info!("sending message");
-    tokio::select! {
-        msg = rx.recv() => {
-            match msg {
-                Some(msg) => Json(msg).into_response(),
-                None => Json(WebMessage::closed()).into_response(),
-            }
-        }
-        _ = tokio::time::sleep(tokio::time::Duration::from_secs(1)) => {
-            Json(WebMessage::empty()).into_response()
-        }
+    info!("sending cached message");
+
+    let latest = state.latest.read().await;
+    match latest.as_ref() {
+        Some(msg) => Json(msg.clone()).into_response(),
+        None => Json(WebMessage::empty()).into_response(),
     }
+}
+
+pub async fn history(State(state): State<WebState>) -> impl IntoResponse {
+    info!("sending cached history");
+
+    let history = state.history.read().await;
+    let items: Vec<WebMessage> = history.iter().cloned().collect();
+    Json(items).into_response()
 }
 
 pub async fn handle_404() -> impl IntoResponse {

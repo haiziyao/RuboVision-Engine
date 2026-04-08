@@ -31,7 +31,7 @@ impl DeviceMap {
         self.device_list.insert(device_id.to_string(),device);
     }
 
-    pub fn get_device(&mut self, device_id:&String) -> Option<Device> {
-        self.device_list.remove(device_id)
+    pub fn get_device(&self, device_id:&str) -> Option<Device> {
+        self.device_list.get(device_id).cloned()
     }
 }

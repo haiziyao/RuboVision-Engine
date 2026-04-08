@@ -1,9 +1,10 @@
 use tracing::warn;
 use crate::config::{FuncParamConfig, FuncParam};
 use crate::device::Device;
-use crate::func::{FuncWorkerMap, FunctionWorker};
+use crate::func::{FuncWorkerMap};
 use crate::web::WebMessage;
 use crate::func::usual::*;
+use crate::func::tarits::*;
 
 pub fn register_func(cfg: FuncParamConfig) -> FuncWorkerMap {
     let FuncParamConfig{func_param_list} = cfg;
@@ -16,16 +17,15 @@ pub fn register_func(cfg: FuncParamConfig) -> FuncWorkerMap {
 }
 
 
-fn function_factory(function_id:&str,args:&Vec<String>) -> FunctionWorker{
+fn function_factory(function_id: &str, args: &Vec<String>) -> FunctionDef {
     match function_id {
-        "example_fn" => register_factory(function_id,args,example_fn()),
-        _ => register_factory(function_id,args,fn_default())
+        "example_fn" => FunctionDef::new(function_id, args.clone(), example_fn),
+        "debug_fun" => FunctionDef::new(function_id, args.clone(), fn_debug),
+        _ => {
+            warn!("FuncID missed, default function registered: {}", function_id);
+            FunctionDef::new(function_id, args.clone(), fn_default)
+        }
     }
-}
-
-fn register_factory(func_id:&str, args:&Vec<String>, func :Box<dyn FnMut(&mut Vec<String>,&mut Device) -> WebMessage + Send>) -> FunctionWorker {
-     
-    FunctionWorker::new(func_id,func,args.clone())
 }
 
 

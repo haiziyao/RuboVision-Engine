@@ -1,6 +1,6 @@
 
 use anyhow::{Context, Result};
-use tracing::info;
+use tracing::{info, warn};
 use tokio::sync::mpsc;
 use embed::Assets;
 
@@ -46,7 +46,15 @@ pub async fn run() -> Result<()> {
     
     // TODO: use bindings_config to register
     let (source_sender,listener_receiver) = mpsc::channel::<Event>(32);
-    register_source(bindings_config,source_sender).with_context(||"Start Failed ... caused by register_source").unwrap();
+    match register_source(bindings_config,source_sender).with_context(||"Start Failed ... caused by register_source"){
+        Err(e) => {
+            warn!("register source failed {e}");
+            panic!();
+        },
+        _ =>{
+            info!("sources are register successfully");
+        } ,
+    };
 
     info!("Register Function Started ... ");
     let func_worker_map = register_func(func_param_config);
@@ -64,7 +72,7 @@ pub async fn run() -> Result<()> {
         info!("Web Channel starting ...");
         let _web_handler = tokio::spawn(async move {
             info!("Web handler starting...");
-            web::run(web_config,returner_receiver).await;
+            let _ =web::run(web_config,returner_receiver).await;
         });
     }
 

@@ -21,7 +21,7 @@ impl TaskDispatcher {
     }
     
     
-    pub fn find_device(&mut self,event: &Event) -> Option<Device> {
+    pub fn find_device(&self,event: &Event) -> Option<Device> {
         match event {
             Event::UsualEvent(_,_,device_id) => {
                 info!("Usual event: {:?} get the device", device_id);

@@ -1,4 +1,3 @@
-#![warn(dead_code)]
 
 use tracing::{info,debug};
 
@@ -31,6 +30,7 @@ impl WebMessage {
         }
     }
 
+    #[allow(dead_code)]
     pub fn closed() -> Self {
         info!("this is a closed web message");
         Self {

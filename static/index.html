@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
@@ -117,7 +117,7 @@
         .metrics {
             margin-top: 16px;
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(5, minmax(0, 1fr));
             gap: 10px;
         }
 
@@ -135,7 +135,7 @@
         }
 
         .metric-value {
-            font-size: 26px;
+            font-size: 24px;
             font-weight: 700;
             font-family: Consolas, "Courier New", monospace;
         }
@@ -303,7 +303,7 @@
 <main class="page">
     <section class="hero">
         <h1>RuboVision Message Panel</h1>
-        <p>首页轮询 <code>/message</code>。`204` 只计入空消息，不进入历史；只有有效消息会保留在右侧历史记录。</p>
+        <p>首页轮询 <code>/message</code>，历史记录来自后端缓存 <code>/history</code>。`204` 只计入空消息，不进入历史。</p>
     </section>
 
     <section class="grid">
@@ -321,9 +321,10 @@
             </div>
 
             <div class="meta">
-                <span>轮询间隔：<strong>800ms</strong></span>
+                <span>消息轮询：<strong>1500ms</strong></span>
+                <span>历史刷新：<strong>3000ms</strong></span>
                 <span>历史上限：<strong>20</strong></span>
-                <span>接口：<code>/message</code></span>
+                <span>接口：<code>/message</code> + <code>/history</code></span>
                 <span>轮询状态：<strong id="polling-state">已停止</strong></span>
             </div>
 
@@ -344,6 +345,10 @@
                     <div class="metric-label">有效记录数</div>
                     <div class="metric-value" id="valid-count">0</div>
                 </div>
+                <div class="metric-card">
+                    <div class="metric-label">历史拉取次数</div>
+                    <div class="metric-value" id="history-sync-count">0</div>
+                </div>
             </div>
 
             <div class="image-box">
@@ -357,15 +362,16 @@
             <div class="toolbar">
                 <button id="start-polling">开始请求</button>
                 <button id="stop-polling" class="danger">停止请求</button>
-                <button id="refresh-now">立即请求一次</button>
-                <button id="clear-history" class="secondary">清空记录</button>
+                <button id="refresh-now">立即刷新消息</button>
+                <button id="refresh-history" class="secondary">立即同步历史</button>
+                <button id="clear-history" class="secondary">清空本地视图</button>
             </div>
         </article>
 
         <article class="panel">
             <div class="history-head">
                 <h2>Recent Messages</h2>
-                <small>最多保留 20 条有效消息</small>
+                <small>显示后端缓存的最近 20 条有效消息</small>
             </div>
             <div id="history" class="history-list">
                 <div class="history-item">
@@ -378,15 +384,19 @@
 
 <script>
     const MAX_HISTORY = 20;
-    const POLL_INTERVAL_MS = 800;
-    const historyItems = [];
+    const MESSAGE_INTERVAL_MS = 1500;
+    const HISTORY_INTERVAL_MS = 3000;
 
+    let historyItems = [];
     let totalRequestCount = 0;
     let emptyMessageCount = 0;
     let invalidRequestCount = 0;
+    let historySyncCount = 0;
     let pollingEnabled = false;
-    let pollTimer = null;
-    let requestInFlight = false;
+    let messageTimer = null;
+    let historyTimer = null;
+    let messageInFlight = false;
+    let historyInFlight = false;
 
     const codeBadge = document.getElementById('code-badge');
     const textNode = document.getElementById('text');
@@ -400,12 +410,14 @@
     const emptyCountNode = document.getElementById('empty-count');
     const invalidCountNode = document.getElementById('invalid-count');
     const validCountNode = document.getElementById('valid-count');
+    const historySyncCountNode = document.getElementById('history-sync-count');
     const pollingStateNode = document.getElementById('polling-state');
     const historyNode = document.getElementById('history');
 
     const startPollingButton = document.getElementById('start-polling');
     const stopPollingButton = document.getElementById('stop-polling');
     const refreshNowButton = document.getElementById('refresh-now');
+    const refreshHistoryButton = document.getElementById('refresh-history');
     const clearHistoryButton = document.getElementById('clear-history');
 
     function badgeClass(code) {
@@ -437,11 +449,24 @@
         return Number.isFinite(code) && code >= 200 && code < 300 && code !== 204 && text.length > 0;
     }
 
+    function normalizeHistory(items) {
+        return items
+            .filter(isValidMessage)
+            .slice(0, MAX_HISTORY)
+            .map((item, index) => ({
+                code: item.code ?? 0,
+                text: item.text ?? '',
+                image: item.image ?? null,
+                time: nowString() + ` #${index + 1}`,
+            }));
+    }
+
     function updateCounters() {
         requestCountNode.textContent = String(totalRequestCount);
         emptyCountNode.textContent = String(emptyMessageCount);
         invalidCountNode.textContent = String(invalidRequestCount);
         validCountNode.textContent = String(historyItems.length);
+        historySyncCountNode.textContent = String(historySyncCount);
         pollingStateNode.textContent = pollingEnabled ? '运行中' : '已停止';
         startPollingButton.disabled = pollingEnabled;
         stopPollingButton.disabled = !pollingEnabled;
@@ -471,29 +496,13 @@
         setImage(data);
     }
 
-    function pushHistory(data) {
-        historyItems.unshift({
-            code: data.code ?? 0,
-            text: data.text ?? '',
-            image: data.image ?? null,
-            time: nowString(),
-        });
-
-        if (historyItems.length > MAX_HISTORY) {
-            historyItems.length = MAX_HISTORY;
-        }
-
-        renderHistory();
-        updateCounters();
-    }
-
     function renderHistory() {
         if (!historyItems.length) {
             historyNode.innerHTML = `
-          <div class="history-item">
-            <p class="history-text">暂无有效记录</p>
-          </div>
-        `;
+                <div class="history-item">
+                    <p class="history-text">暂无有效记录</p>
+                </div>
+            `;
             return;
         }
 
@@ -503,16 +512,16 @@
                 : '';
 
             return `
-          <div class="history-item">
-            <div class="history-top">
-              <span class="${badgeClass(Number(item.code))}">${escapeHtml(String(item.code))}</span>
-              <span class="history-time">${escapeHtml(item.time)}</span>
-            </div>
-            <p class="history-text">${escapeHtml(item.text)}</p>
-            <div class="history-tag">image=${item.image ? 'yes' : 'no'}</div>
-            ${imageBlock}
-          </div>
-        `;
+                <div class="history-item">
+                    <div class="history-top">
+                        <span class="${badgeClass(Number(item.code))}">${escapeHtml(String(item.code))}</span>
+                        <span class="history-time">${escapeHtml(item.time)}</span>
+                    </div>
+                    <p class="history-text">${escapeHtml(item.text)}</p>
+                    <div class="history-tag">image=${item.image ? 'yes' : 'no'}</div>
+                    ${imageBlock}
+                </div>
+            `;
         }).join('');
     }
 
@@ -523,12 +532,24 @@
         return await response.json();
     }
 
-    function scheduleNextPoll() {
-        if (!pollingEnabled) return;
-        pollTimer = setTimeout(pollMessage, POLL_INTERVAL_MS);
+    async function requestHistory() {
+        historySyncCount += 1;
+        updateCounters();
+        const response = await fetch('/history', { cache: 'no-store' });
+        return await response.json();
     }
 
-    async function handleOneRequest() {
+    function scheduleMessagePoll() {
+        if (!pollingEnabled) return;
+        messageTimer = setTimeout(pollMessage, MESSAGE_INTERVAL_MS);
+    }
+
+    function scheduleHistoryPoll() {
+        if (!pollingEnabled) return;
+        historyTimer = setTimeout(syncHistory, HISTORY_INTERVAL_MS);
+    }
+
+    async function handleOneMessageRequest() {
         const data = await requestMessage();
         updateCurrentMessage(data);
 
@@ -538,24 +559,42 @@
             return;
         }
 
-        if (isValidMessage(data)) {
-            pushHistory(data);
+        if (!isValidMessage(data)) {
+            invalidRequestCount += 1;
+            updateCounters();
+        }
+    }
+
+    async function syncHistory() {
+        if (!pollingEnabled || historyInFlight) {
+            scheduleHistoryPoll();
             return;
         }
 
-        invalidRequestCount += 1;
-        updateCounters();
+        historyInFlight = true;
+        try {
+            const items = await requestHistory();
+            historyItems = normalizeHistory(Array.isArray(items) ? items : []);
+            renderHistory();
+            updateCounters();
+        } catch (error) {
+            invalidRequestCount += 1;
+            updateCounters();
+        } finally {
+            historyInFlight = false;
+            scheduleHistoryPoll();
+        }
     }
 
     async function pollMessage() {
-        if (!pollingEnabled || requestInFlight) {
-            scheduleNextPoll();
+        if (!pollingEnabled || messageInFlight) {
+            scheduleMessagePoll();
             return;
         }
 
-        requestInFlight = true;
+        messageInFlight = true;
         try {
-            await handleOneRequest();
+            await handleOneMessageRequest();
         } catch (error) {
             invalidRequestCount += 1;
             updateCurrentMessage({
@@ -565,16 +604,16 @@
             });
             updateCounters();
         } finally {
-            requestInFlight = false;
-            scheduleNextPoll();
+            messageInFlight = false;
+            scheduleMessagePoll();
         }
     }
 
     async function fetchOnce() {
-        if (requestInFlight) return;
-        requestInFlight = true;
+        if (messageInFlight) return;
+        messageInFlight = true;
         try {
-            await handleOneRequest();
+            await handleOneMessageRequest();
         } catch (error) {
             invalidRequestCount += 1;
             updateCurrentMessage({
@@ -584,7 +623,23 @@
             });
             updateCounters();
         } finally {
-            requestInFlight = false;
+            messageInFlight = false;
+        }
+    }
+
+    async function fetchHistoryOnce() {
+        if (historyInFlight) return;
+        historyInFlight = true;
+        try {
+            const items = await requestHistory();
+            historyItems = normalizeHistory(Array.isArray(items) ? items : []);
+            renderHistory();
+            updateCounters();
+        } catch (error) {
+            invalidRequestCount += 1;
+            updateCounters();
+        } finally {
+            historyInFlight = false;
         }
     }
 
@@ -593,13 +648,18 @@
         pollingEnabled = true;
         updateCounters();
         pollMessage();
+        syncHistory();
     }
 
     function stopPolling() {
         pollingEnabled = false;
-        if (pollTimer) {
-            clearTimeout(pollTimer);
-            pollTimer = null;
+        if (messageTimer) {
+            clearTimeout(messageTimer);
+            messageTimer = null;
+        }
+        if (historyTimer) {
+            clearTimeout(historyTimer);
+            historyTimer = null;
         }
         updateCounters();
     }
@@ -625,8 +685,9 @@
     startPollingButton.addEventListener('click', startPolling);
     stopPollingButton.addEventListener('click', stopPolling);
     refreshNowButton.addEventListener('click', fetchOnce);
+    refreshHistoryButton.addEventListener('click', fetchHistoryOnce);
     clearHistoryButton.addEventListener('click', () => {
-        historyItems.length = 0;
+        historyItems = [];
         renderHistory();
         updateCounters();
     });
