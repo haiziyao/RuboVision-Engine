@@ -1,24 +1,19 @@
-use crate::config::FuncReturnConfig;
+use crate::config::ReturnTargets;
 use crate::device::Device;
 use crate::web::WebMessage;
 use std::collections::HashMap;
 
-pub type Function = fn(&[String], &Device, &FuncReturnConfig) -> WebMessage;
+pub type Function = fn(&[String], &Device, &ReturnTargets) -> WebMessage;
 
 pub struct FunctionDef {
     pub func_id: String,
     pub args: Vec<String>,
-    pub returns: FuncReturnConfig,
+    pub returns: ReturnTargets,
     pub func: Function,
 }
 
 impl FunctionDef {
-    pub fn new(
-        func_id: &str,
-        args: Vec<String>,
-        returns: FuncReturnConfig,
-        func: Function,
-    ) -> Self {
+    pub fn new(func_id: &str, args: Vec<String>, returns: ReturnTargets, func: Function) -> Self {
         Self {
             func_id: func_id.to_string(),
             args,
@@ -41,16 +36,11 @@ pub struct FunctionWorker {
     pub func_id: String,
     pub func: Function,
     pub args: Vec<String>,
-    pub returns: FuncReturnConfig,
+    pub returns: ReturnTargets,
 }
 
 impl FunctionWorker {
-    pub fn new(
-        func_id: &str,
-        func: Function,
-        args: Vec<String>,
-        returns: FuncReturnConfig,
-    ) -> Self {
+    pub fn new(func_id: &str, func: Function, args: Vec<String>, returns: ReturnTargets) -> Self {
         let func_id = func_id.to_string();
         Self {
             func_id: func_id.to_string(),

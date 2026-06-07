@@ -1,27 +1,18 @@
-# [device_param_config.uart_config] 是整个进程唯一的串口配置。
-# UartSource 监听和任务结果回写都使用这一份配置。
-[device_param_config.uart_config]
-serial = "/dev/ttyV0"
-baud = 9600
-data_bit = 8
-stop_bit = 1
-parity_bit = false
-
-[[device_param_config.device_config_list]]
+[[devices.list]]
 device_id = "color_camera"
 kind = "Camera"
 args = [
     "path=/dev/video2",
 ]
 
-[[device_param_config.device_config_list]]
+[[devices.list]]
 device_id = "qr_camera"
 kind = "Camera"
 args = [
     "path=/dev/video4",
 ]
 
-[[device_param_config.device_config_list]]
+[[devices.list]]
 device_id = "cross_camera"
 kind = "Camera"
 args = [

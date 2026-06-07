@@ -31,20 +31,21 @@ pub async fn run() -> Result<()> {
 
     let RuntimeConfig {
         app: _app_config,
-        web: web_config,
+        message,
         bindings: bindings_config,
-        func_param_config,
-        device_param_config,
+        functions,
+        devices,
     } = cfg;
 
-    let uart_config = device_param_config.uart_config.clone();
+    let web_config = message.web.clone();
+    let uart_config = message.uart.clone();
 
     // start RuboVision
     print_banner();
 
     // TODO: use bindings_config to register
     let (source_sender, listener_receiver) = mpsc::channel::<Event>(32);
-    match register_source(bindings_config, source_sender, uart_config)
+    match register_source(bindings_config, source_sender, uart_config.clone())
         .with_context(|| "Start Failed ... caused by register_source")
     {
         Err(e) => {
@@ -56,9 +57,10 @@ pub async fn run() -> Result<()> {
     };
 
     info!("Register Function Started ... ");
-    let func_worker_map = register_func(func_param_config);
+    let func_worker_map =
+        register_func(functions, &message.gpio).context("failed to register functions")?;
     info!("Register Device Started ... ");
-    let device_map = register_device(device_param_config);
+    let device_map = register_device(devices, &uart_config);
 
     // register listener(dispatcher,executor) returner
     let (executor_sender, returner_receiver) = mpsc::channel::<WebMessage>(32);

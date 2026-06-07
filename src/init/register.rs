@@ -20,7 +20,7 @@ pub fn register_source(
         uart_source,
         timer_source,
         loop_source,
-        web_source,
+        debug_source,
     } = bindings_config;
     info!("Source initializing ...");
     if !uart_source.is_empty() {
@@ -56,12 +56,12 @@ pub fn register_source(
     }
 
     // TODO: 后期需要加上web调试的东西，所以会加一个 tokio::sync::mpsc::channel
-    if !web_source.is_empty() {
+    if !debug_source.is_empty() {
         let mut web_sourcer = WebSource::new();
         web_sourcer.set_sender(tx.clone());
-        info!("WebSource set to {:?}", web_source);
+        info!("WebSource set to {:?}", debug_source);
         tokio::spawn(async move {
-            if let Err(e) = web_sourcer.start(web_source).await {
+            if let Err(e) = web_sourcer.start(debug_source).await {
                 error!("WebSource work failed: {e:#}");
             }
         });

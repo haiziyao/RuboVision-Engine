@@ -1,0 +1,36 @@
+[[functions.entries]]
+function_id = "color_detect"
+returns = { web = true, uart = true, gpio = "color" }
+
+[functions.entries.params]
+debug_model = false
+loop_count = 5
+radius_ratio = 0.4
+detect_area_access_rate = 0.8
+color_ranges = [
+    { name = "red", hsv = [0, 50, 160, 255, 110, 255] },
+    { name = "blue", hsv = [100, 137, 124, 255, 56, 255] },
+    { name = "green", hsv = [50, 100, 91, 255, 85, 255] },
+    { name = "black", hsv = [0, 179, 0, 255, 0, 76] },
+    { name = "white", hsv = [0, 170, 0, 55, 120, 255] },
+]
+
+[[functions.entries]]
+function_id = "qr_detect"
+returns = { web = true, uart = true, gpio = "qr" }
+
+[functions.entries.params]
+debug_model = false
+
+[[functions.entries]]
+function_id = "cross_detect"
+returns = { web = true, uart = false }
+
+[functions.entries.params]
+
+[[functions.entries]]
+function_id = "debug_fun"
+returns = { web = true, uart = false }
+
+[functions.entries.params]
+message = "loop_source"

@@ -1,18 +1,14 @@
-use crate::config::{DeviceParam, DeviceParamConfig};
+use crate::config::{DeviceParam, DevicesConfig, UartConfig};
 use crate::device::UartDeviceConfig;
 use crate::device::usual::*;
 use crate::device::{Device, DeviceMap};
 
-pub fn register_device(config: DeviceParamConfig) -> DeviceMap {
-    let DeviceParamConfig {
-        uart_config,
-        device_config_list,
-    } = config;
-    let runtime_uart = UartDeviceConfig::from_param(&uart_config)
-        .expect("invalid device_param_config.uart_config");
+pub fn register_device(config: DevicesConfig, uart_config: &UartConfig) -> DeviceMap {
+    let runtime_uart =
+        UartDeviceConfig::from_param(uart_config).expect("invalid message.uart config");
 
     let mut map = DeviceMap::new();
-    device_config_list.iter().for_each(|device_config| {
+    config.list.iter().for_each(|device_config| {
         let DeviceParam {
             device_id,
             kind,

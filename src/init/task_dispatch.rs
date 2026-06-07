@@ -1,4 +1,4 @@
-use crate::config::FuncReturnConfig;
+use crate::config::ReturnTargets;
 use crate::device::{Device, DeviceMap};
 use crate::func::{FuncWorkerMap, FunctionWorker, fn_debug};
 use crate::source::Event;
@@ -51,9 +51,10 @@ impl TaskDispatcher {
                     "debug_fun",
                     fn_debug,
                     args,
-                    FuncReturnConfig {
+                    ReturnTargets {
                         web: true,
-                        gpio: false,
+                        uart: false,
+                        gpio: None,
                     },
                 )
             }

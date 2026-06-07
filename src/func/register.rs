@@ -1,23 +1,24 @@
-use crate::config::{FuncParam, FuncParamConfig, FuncReturnConfig};
+use crate::config::{FunctionsConfig, GpioConfig, ReturnTargets};
 use crate::func::FuncWorkerMap;
 use crate::func::tarits::*;
 use crate::func::usual::*;
+use anyhow::{Context, Result};
 
-pub fn register_func(cfg: FuncParamConfig) -> FuncWorkerMap {
-    let FuncParamConfig { func_param_list } = cfg;
+pub fn register_func(cfg: FunctionsConfig, gpio: &GpioConfig) -> Result<FuncWorkerMap> {
     let mut map = FuncWorkerMap::new();
-    func_param_list.iter().for_each(|x| {
-        let FuncParam {
-            function_id,
-            returns,
-            args,
-        } = &x;
-        map.add(function_id, function_factory(function_id, returns, args));
-    });
-    map
+    for entry in cfg.entries {
+        let args = entry
+            .legacy_args(gpio)
+            .with_context(|| format!("invalid params for `{}`", entry.function_id))?;
+        map.add(
+            &entry.function_id,
+            function_factory(&entry.function_id, &entry.returns, &args),
+        );
+    }
+    Ok(map)
 }
 
-fn function_factory(function_id: &str, returns: &FuncReturnConfig, args: &[String]) -> FunctionDef {
+fn function_factory(function_id: &str, returns: &ReturnTargets, args: &[String]) -> FunctionDef {
     match function_id {
         "debug_fun" => FunctionDef::new(function_id, args.to_owned(), returns.clone(), fn_debug),
         "color_detect" => FunctionDef::new(

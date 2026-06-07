@@ -1,4 +1,4 @@
-use crate::config::FuncReturnConfig;
+use crate::config::ReturnTargets;
 use crate::device::{
     ColorDetectConfig, CrossDetectConfig, Device, QrDetectConfig, ResponseDeviceConfig,
     TaskLightKind, begin_light_session, run_color_detect, run_cross_detect, run_qr_detect,
@@ -10,37 +10,33 @@ use std::thread::sleep;
 use std::time::Duration;
 use tracing::{debug, warn};
 
-pub fn fn_debug(args: &[String], _device: &Device, _returns: &FuncReturnConfig) -> WebMessage {
+pub fn fn_debug(args: &[String], _device: &Device, _returns: &ReturnTargets) -> WebMessage {
     debug!("debug Function executing");
     sleep(Duration::from_secs(5));
     let args = args.join(",");
     WebMessage::ok(format!("this is the debug function {args}"))
 }
 
-pub fn fn_color_detect(args: &[String], device: &Device, returns: &FuncReturnConfig) -> WebMessage {
+pub fn fn_color_detect(args: &[String], device: &Device, returns: &ReturnTargets) -> WebMessage {
     into_web_message("color_detect", color_detect_impl(args, device, returns))
 }
 
-pub fn fn_qr_detect(args: &[String], device: &Device, returns: &FuncReturnConfig) -> WebMessage {
+pub fn fn_qr_detect(args: &[String], device: &Device, returns: &ReturnTargets) -> WebMessage {
     into_web_message("qr_detect", qr_detect_impl(args, device, returns))
 }
 
-pub fn fn_cross_detect(
-    args: &[String],
-    device: &Device,
-    _returns: &FuncReturnConfig,
-) -> WebMessage {
+pub fn fn_cross_detect(args: &[String], device: &Device, _returns: &ReturnTargets) -> WebMessage {
     into_web_message("cross_detect", cross_detect_impl(args, device))
 }
 
 fn color_detect_impl(
     args: &[String],
     device: &Device,
-    returns: &FuncReturnConfig,
+    returns: &ReturnTargets,
 ) -> Result<WebMessage> {
     let config = color_config(args, device)?;
     let response = response_config(args, device)?;
-    let _light = if returns.gpio {
+    let _light = if returns.gpio.is_some() {
         begin_light_session(&response, TaskLightKind::Color)?
     } else {
         None
@@ -53,14 +49,10 @@ fn color_detect_impl(
     )))
 }
 
-fn qr_detect_impl(
-    args: &[String],
-    device: &Device,
-    returns: &FuncReturnConfig,
-) -> Result<WebMessage> {
+fn qr_detect_impl(args: &[String], device: &Device, returns: &ReturnTargets) -> Result<WebMessage> {
     let config = qr_config(args, device)?;
     let response = response_config(args, device)?;
-    let _light = if returns.gpio {
+    let _light = if returns.gpio.is_some() {
         begin_light_session(&response, TaskLightKind::Qr)?
     } else {
         None

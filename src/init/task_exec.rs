@@ -2,7 +2,7 @@ use anyhow::{Context, Result};
 use tokio::sync::mpsc::Sender;
 use tracing::info;
 
-use crate::config::FuncReturnConfig;
+use crate::config::ReturnTargets;
 use crate::device::Device;
 use crate::func::FunctionWorker;
 use crate::web::WebMessage;
@@ -25,7 +25,7 @@ impl TaskExecutor {
 pub fn execute_sync(
     device: Device,
     func_worker: FunctionWorker,
-) -> Result<(WebMessage, FuncReturnConfig)> {
+) -> Result<(WebMessage, ReturnTargets)> {
     let FunctionWorker {
         func_id,
         args,

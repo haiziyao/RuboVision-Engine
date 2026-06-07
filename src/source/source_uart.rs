@@ -48,7 +48,7 @@ impl UartSource {
 
         let binding_map: HashMap<String, UartBinding> = uart_binding
             .into_iter()
-            .map(|binding| (binding.source_key.clone(), binding))
+            .map(|binding| (binding.source_key.to_string(), binding))
             .collect();
 
         let mut uart = uart_config.open_uart()?;
@@ -266,7 +266,7 @@ mod tests {
 
         let bindings = vec![UartBinding {
             task_id: "uart_test_task".to_string(),
-            source_key: "a1".to_string(),
+            source_key: 1,
             device_id: "uart_test_camera".to_string(),
             function_id: "color_detect".to_string(),
         }];
@@ -276,7 +276,7 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         let mut peer = pair.open_peer_write()?;
-        peer.write_all(b"a1\n")?;
+        peer.write_all(b"1\n")?;
         peer.flush()?;
 
         let event = tokio::time::timeout(Duration::from_secs(2), rx.recv())

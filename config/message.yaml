@@ -1,0 +1,19 @@
+message:
+  web:
+    on: true
+    host: 127.0.0.1
+    port: 3000
+  uart:
+    on: true
+    serial: /dev/ttyV0
+    baud: 9600
+    data_bit: 8
+    stop_bit: 1
+    parity_bit: false
+  gpio:
+    on: true
+    active_low: true
+    run_pin: 27
+    signals:
+      color: 17
+      qr: 22
