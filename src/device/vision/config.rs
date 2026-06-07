@@ -5,7 +5,6 @@ use anyhow::{Context, Result, anyhow};
 #[derive(Debug, Clone)]
 pub struct CameraDevice {
     pub path: String,
-    pub uart: super::response::UartDeviceConfig,
 }
 
 #[derive(Debug, Clone)]
@@ -36,11 +35,10 @@ pub struct CrossDetectConfig {
 }
 
 impl CameraDevice {
-    pub fn from_args(args: &[String], uart: super::response::UartDeviceConfig) -> Result<Self> {
+    pub fn from_args(args: &[String]) -> Result<Self> {
         let map = arg_map(args);
         Ok(Self {
             path: string_value(&map, "path")?,
-            uart,
         })
     }
 }
@@ -111,13 +109,6 @@ fn i32_value(map: &HashMap<String, String>, key: &str) -> Result<i32> {
     value
         .parse()
         .with_context(|| format!("invalid i32 parameter `{key}`: got `{value}`"))
-}
-
-pub(super) fn u8_value(map: &HashMap<String, String>, key: &str) -> Result<u8> {
-    let value = string_value(map, key)?;
-    value
-        .parse()
-        .with_context(|| format!("invalid u8 parameter `{key}`: got `{value}`"))
 }
 
 fn f64_value(map: &HashMap<String, String>, key: &str) -> Result<f64> {

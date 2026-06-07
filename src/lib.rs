@@ -8,6 +8,7 @@ use crate::device::register_device;
 use crate::func::register_func;
 use crate::init::register_source;
 use crate::init::{init_logging, register_listener};
+use crate::message::{MessageRouter, UartSink, WebSink, start_gpio_sink, start_uart_transport};
 use crate::source::Event;
 use crate::web::WebMessage;
 
@@ -16,6 +17,7 @@ mod device;
 mod embed;
 mod func;
 mod init;
+mod message;
 mod source;
 mod utils;
 mod web;
@@ -39,13 +41,28 @@ pub async fn run() -> Result<()> {
 
     let web_config = message.web.clone();
     let uart_config = message.uart.clone();
+    let uart_channels = if uart_config.on {
+        match start_uart_transport(&uart_config) {
+            Ok(channels) => Some(channels),
+            Err(error) => {
+                warn!("UART transport unavailable: {error:#}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let (uart_incoming, uart_outgoing) = match uart_channels {
+        Some(channels) => (Some(channels.incoming), Some(channels.outgoing)),
+        None => (None, None),
+    };
 
     // start RuboVision
     print_banner();
 
     // TODO: use bindings_config to register
     let (source_sender, listener_receiver) = mpsc::channel::<Event>(32);
-    match register_source(bindings_config, source_sender, uart_config.clone())
+    match register_source(bindings_config, source_sender, uart_incoming)
         .with_context(|| "Start Failed ... caused by register_source")
     {
         Err(e) => {
@@ -57,17 +74,33 @@ pub async fn run() -> Result<()> {
     };
 
     info!("Register Function Started ... ");
-    let func_worker_map =
-        register_func(functions, &message.gpio).context("failed to register functions")?;
+    let func_worker_map = register_func(functions).context("failed to register functions")?;
     info!("Register Device Started ... ");
-    let device_map = register_device(devices, &uart_config);
+    let device_map = register_device(devices);
+
+    let (executor_sender, returner_receiver) = mpsc::channel::<WebMessage>(32);
+    let gpio_sink = if message.gpio.on {
+        match start_gpio_sink(message.gpio.clone()) {
+            Ok(sink) => Some(sink),
+            Err(error) => {
+                warn!("GPIO sink unavailable: {error:#}");
+                None
+            }
+        }
+    } else {
+        None
+    };
+    let message_router = MessageRouter::new(
+        Some(WebSink::new(executor_sender)),
+        uart_outgoing.map(UartSink::new),
+        gpio_sink,
+    );
 
     // register listener(dispatcher,executor) returner
-    let (executor_sender, returner_receiver) = mpsc::channel::<WebMessage>(32);
     tokio::spawn(async move {
         register_listener(
             listener_receiver,
-            executor_sender,
+            message_router,
             func_worker_map,
             device_map,
         )

@@ -15,7 +15,6 @@ pub use func::ReturnTargets;
 pub use r#type::GpioConfig;
 pub use r#type::RuntimeConfig;
 pub use r#type::UartConfig;
-pub use r#type::UartConfig as UartParam;
 pub use web::WebConfig;
 
 pub use settings::load_config;

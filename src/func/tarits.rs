@@ -1,9 +1,9 @@
 use crate::config::ReturnTargets;
 use crate::device::Device;
-use crate::web::WebMessage;
+use crate::message::TaskOutput;
 use std::collections::HashMap;
 
-pub type Function = fn(&[String], &Device, &ReturnTargets) -> WebMessage;
+pub type Function = fn(&[String], &Device, &ReturnTargets) -> TaskOutput;
 
 pub struct FunctionDef {
     pub func_id: String,

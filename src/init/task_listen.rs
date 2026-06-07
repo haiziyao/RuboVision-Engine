@@ -33,10 +33,10 @@ impl TaskListener {
                     info!("[TaskListener] received event: {:?}", event);
                     let device = self.dispatcher.find_device(&event);
                     let func = self.dispatcher.find_func(&event);
-                    let sender = self.executor.get_sender();
+                    let router = self.executor.get_router();
 
                     tokio::spawn(async move {
-                        match execute(sender, device, func).await {
+                        match execute(router, device, func).await {
                             Ok(_) => {
                                 info!("[TaskListener] executed successfully");
                             }

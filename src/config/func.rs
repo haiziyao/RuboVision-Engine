@@ -1,8 +1,6 @@
 use anyhow::{Context, Result, anyhow};
 use serde::{Deserialize, Serialize};
 
-use crate::config::GpioConfig;
-
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(default)]
 pub struct ReturnTargets {
@@ -26,7 +24,7 @@ pub struct FunctionsConfig {
 }
 
 impl FunctionEntryConfig {
-    pub fn legacy_args(&self, gpio: &GpioConfig) -> Result<Vec<String>> {
+    pub fn legacy_args(&self) -> Result<Vec<String>> {
         let mut args = Vec::new();
         let table = self
             .params
@@ -67,20 +65,6 @@ impl FunctionEntryConfig {
             }
 
             args.push(format!("{key}={}", value_text(value)?));
-        }
-
-        if self.returns.gpio.is_some() {
-            let color_pin = gpio
-                .signals
-                .get("color")
-                .context("message.gpio.signals.color is required")?;
-            let qr_pin = gpio
-                .signals
-                .get("qr")
-                .context("message.gpio.signals.qr is required")?;
-            args.push(format!("color_light_pin={color_pin}"));
-            args.push(format!("qr_light_pin={qr_pin}"));
-            args.push(format!("gpio_light_pin={}", gpio.run_pin));
         }
 
         Ok(args)

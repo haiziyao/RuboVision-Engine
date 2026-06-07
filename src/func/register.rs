@@ -1,14 +1,14 @@
-use crate::config::{FunctionsConfig, GpioConfig, ReturnTargets};
+use crate::config::{FunctionsConfig, ReturnTargets};
 use crate::func::FuncWorkerMap;
 use crate::func::tarits::*;
 use crate::func::usual::*;
 use anyhow::{Context, Result};
 
-pub fn register_func(cfg: FunctionsConfig, gpio: &GpioConfig) -> Result<FuncWorkerMap> {
+pub fn register_func(cfg: FunctionsConfig) -> Result<FuncWorkerMap> {
     let mut map = FuncWorkerMap::new();
     for entry in cfg.entries {
         let args = entry
-            .legacy_args(gpio)
+            .legacy_args()
             .with_context(|| format!("invalid params for `{}`", entry.function_id))?;
         map.add(
             &entry.function_id,

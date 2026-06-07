@@ -1,11 +1,10 @@
 use std::collections::HashMap;
-use std::time::Duration;
 
 use crate::config::binding::UartBinding;
-use crate::device::UartDeviceConfig;
 use crate::source::{BaseSource, Source, make_event_usual};
 use anyhow::anyhow;
 use log::warn;
+use tokio::sync::mpsc;
 use tracing::{debug, info};
 
 const UART_FRAME_HEAD: u8 = 0xAA;
@@ -47,7 +46,7 @@ impl UartSource {
     pub async fn start(
         &self,
         uart_binding: Vec<UartBinding>,
-        uart_config: UartDeviceConfig,
+        mut incoming: mpsc::Receiver<Vec<u8>>,
     ) -> anyhow::Result<()> {
         // to get the sender
         let Some(_tx) = self.get_sender() else {
@@ -65,34 +64,22 @@ impl UartSource {
             .map(|binding| (binding.source_key, binding))
             .collect();
 
-        let mut uart = uart_config.open_uart()?;
-        let mut buffer = [0u8; 64];
         // UART is a byte stream, so reads can split or combine frames. Keep
         // pending bytes until complete frames can be synchronized and parsed.
         let mut pending = Vec::new();
 
         info!(
-            "UartSource listening on {} with {} command binding(s)",
-            uart_config.serial,
+            "UartSource listening with {} command binding(s)",
             binding_map.len()
         );
 
-        loop {
-            match uart.read(&mut buffer) {
-                Ok(0) => {
-                    tokio::time::sleep(Duration::from_millis(20)).await;
-                }
-                Ok(n) => {
-                    pending.extend_from_slice(&buffer[..n]);
-                    self.dispatch_pending_commands(&mut pending, &binding_map)
-                        .await;
-                }
-                Err(e) => {
-                    warn!("UartSource read error: {:?}", e);
-                    tokio::time::sleep(Duration::from_millis(100)).await;
-                }
-            }
+        while let Some(bytes) = incoming.recv().await {
+            pending.extend_from_slice(&bytes);
+            self.dispatch_pending_commands(&mut pending, &binding_map)
+                .await;
         }
+
+        Err(anyhow!("UART transport input channel closed"))
     }
 
     async fn dispatch_pending_commands(
@@ -206,8 +193,9 @@ mod tests {
         UART_PENDING_MAX_LEN, UartCommandKind, UartSource, classify_uart_command,
         take_uart_commands,
     };
+    use crate::config::UartConfig;
     use crate::config::binding::UartBinding;
-    use crate::device::{ResponseDeviceConfig, UartDeviceConfig, send_response_line};
+    use crate::message::{UartSink, start_uart_transport};
     use crate::source::{Event, Source};
     use anyhow::{Context, Result, anyhow, bail};
     use std::fs::{self, File, OpenOptions};
@@ -265,8 +253,15 @@ mod tests {
             Ok(Some(pair))
         }
 
-        fn config(&self) -> Result<UartDeviceConfig> {
-            UartDeviceConfig::new(self.engine.display().to_string(), 9600, 8, 1, false)
+        fn config(&self) -> UartConfig {
+            UartConfig {
+                on: true,
+                serial: self.engine.display().to_string(),
+                baud: 9600,
+                data_bit: 8,
+                stop_bit: 1,
+                parity_bit: false,
+            }
         }
 
         fn open_peer_write(&self) -> Result<File> {
@@ -390,9 +385,10 @@ mod tests {
             device_id: "uart_test_camera".to_string(),
             function_id: "color_detect".to_string(),
         }];
-        let uart_config = pair.config()?;
+        let uart_channels = start_uart_transport(&pair.config())?;
 
-        let source_task = tokio::spawn(async move { source.start(bindings, uart_config).await });
+        let source_task =
+            tokio::spawn(async move { source.start(bindings, uart_channels.incoming).await });
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         let mut peer = pair.open_peer_write()?;
@@ -416,8 +412,8 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_uart_response_writes_line_to_virtual_serial() -> Result<()> {
+    #[tokio::test]
+    async fn test_uart_response_writes_line_to_virtual_serial() -> Result<()> {
         let Some(pair) = VirtualSerialPair::new("tx")? else {
             return Ok(());
         };
@@ -432,12 +428,10 @@ mod tests {
             let _ = line_tx.send(read_line_blocking(peer));
         });
 
-        let response = ResponseDeviceConfig {
-            uart: pair.config()?,
-            lights: None,
-        };
+        let uart_channels = start_uart_transport(&pair.config())?;
+        let sink = UartSink::new(uart_channels.outgoing);
 
-        send_response_line(&response, "ok:42")?;
+        sink.send_value("ok:42").await?;
         let line = line_rx
             .recv_timeout(Duration::from_secs(2))
             .context("timeout waiting for uart output")??;

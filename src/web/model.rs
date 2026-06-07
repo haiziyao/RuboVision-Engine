@@ -12,6 +12,7 @@ pub struct WebMessage {
 }
 
 impl WebMessage {
+    #[allow(dead_code)]
     pub fn ok(text: impl Into<String>) -> Self {
         info!("this is a simple web message");
         Self {
@@ -23,6 +24,7 @@ impl WebMessage {
         }
     }
 
+    #[allow(dead_code)]
     pub fn error(text: impl Into<String>) -> Self {
         info!("this is a error web message");
         Self {

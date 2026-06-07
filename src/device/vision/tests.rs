@@ -34,7 +34,7 @@ fn color_detect_config_from_config() -> Result<ColorDetectConfig> {
         .find(|function| function.function_id == "color_detect")
         .ok_or_else(|| anyhow!("config does not contain function_id=color_detect"))?;
 
-    ColorDetectConfig::from_args_with_camera(&func.legacy_args(&cfg.message.gpio)?, &camera)
+    ColorDetectConfig::from_args_with_camera(&func.legacy_args()?, &camera)
 }
 
 fn qr_detect_config_from_config() -> Result<QrDetectConfig> {
@@ -54,7 +54,7 @@ fn qr_detect_config_from_config() -> Result<QrDetectConfig> {
         .find(|function| function.function_id == "qr_detect")
         .ok_or_else(|| anyhow!("config does not contain function_id=qr_detect"))?;
 
-    QrDetectConfig::from_args_with_camera(&func.legacy_args(&cfg.message.gpio)?, &camera)
+    QrDetectConfig::from_args_with_camera(&func.legacy_args()?, &camera)
 }
 
 fn cross_detect_config_from_config() -> Result<CrossDetectConfig> {
@@ -74,7 +74,7 @@ fn cross_detect_config_from_config() -> Result<CrossDetectConfig> {
         .find(|function| function.function_id == "cross_detect")
         .ok_or_else(|| anyhow!("config does not contain function_id=cross_detect"))?;
 
-    CrossDetectConfig::from_args_with_camera(&func.legacy_args(&cfg.message.gpio)?, &camera)
+    CrossDetectConfig::from_args_with_camera(&func.legacy_args()?, &camera)
 }
 
 fn configured_device_path(device_id: &str) -> Result<String> {
@@ -94,9 +94,7 @@ fn camera_from_config(cfg: &crate::config::RuntimeConfig, device_id: &str) -> Re
         .iter()
         .find(|device| device.device_id == device_id)
         .ok_or_else(|| anyhow!("config does not contain device_id={device_id}"))?;
-    let uart = UartDeviceConfig::from_param(&cfg.message.uart)?;
-
-    CameraDevice::from_args(&device.args, uart)
+    CameraDevice::from_args(&device.args)
 }
 
 fn configured_color_names() -> Result<Vec<String>> {
@@ -109,7 +107,7 @@ fn configured_color_names() -> Result<Vec<String>> {
         .ok_or_else(|| anyhow!("config does not contain function_id=color_detect"))?;
 
     Ok(func
-        .legacy_args(&cfg.message.gpio)?
+        .legacy_args()?
         .iter()
         .filter_map(|arg| arg.split_once('='))
         .filter_map(|(key, _)| key.trim().strip_prefix("color."))
