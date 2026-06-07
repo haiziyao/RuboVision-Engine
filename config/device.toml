@@ -1,20 +1,14 @@
 [[devices.list]]
 device_id = "color_camera"
 kind = "Camera"
-args = [
-    "path=/dev/video2",
-]
+path = "/dev/video2"
 
 [[devices.list]]
 device_id = "qr_camera"
 kind = "Camera"
-args = [
-    "path=/dev/video4",
-]
+path = "/dev/video4"
 
 [[devices.list]]
 device_id = "cross_camera"
 kind = "Camera"
-args = [
-    "path=/dev/video2",
-]
+path = "/dev/video2"

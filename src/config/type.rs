@@ -130,3 +130,31 @@ pub struct GpioConfig {
     pub run_pin: u8,
     pub signals: std::collections::HashMap<String, u8>,
 }
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ColorDetectParams {
+    pub debug_model: bool,
+    pub loop_count: i32,
+    pub radius_ratio: f64,
+    pub detect_area_access_rate: f64,
+    pub color_ranges: Vec<ColorRangeConfig>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct ColorRangeConfig {
+    pub name: String,
+    pub hsv: [i32; 6],
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct QrDetectParams {
+    pub debug_model: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct CrossDetectParams {}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct DebugParams {
+    pub message: String,
+}

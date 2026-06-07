@@ -8,11 +8,17 @@ mod web;
 
 pub use app::AppConfig;
 pub use binding::BindingsConfig;
+pub use device::DeviceKind;
 pub use device::DeviceParam;
 pub use device::DevicesConfig;
+pub use func::FunctionEntryConfig;
 pub use func::FunctionsConfig;
 pub use func::ReturnTargets;
+pub use r#type::ColorDetectParams;
+pub use r#type::CrossDetectParams;
+pub use r#type::DebugParams;
 pub use r#type::GpioConfig;
+pub use r#type::QrDetectParams;
 pub use r#type::RuntimeConfig;
 pub use r#type::UartConfig;
 pub use web::WebConfig;

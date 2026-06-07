@@ -64,6 +64,7 @@ mod tests {
         assert_eq!(cfg.bindings.uart_source[0].source_key, 0x01);
         assert_eq!(cfg.bindings.debug_source[0].source_key, "color");
         assert_eq!(cfg.devices.list[0].device_id, "color_camera");
+        assert_eq!(cfg.devices.list[0].path, "/dev/video2");
         assert!(cfg.functions.entries.iter().any(|entry| {
             entry.function_id == "color_detect"
                 && entry.returns.uart

@@ -1,4 +1,5 @@
 use super::vision::CameraDevice;
+use anyhow::{Result, anyhow};
 use std::collections::HashMap;
 use std::fmt;
 
@@ -31,10 +32,10 @@ impl DeviceMap {
         self.device_list.insert(device_id.to_string(), device);
     }
 
-    pub fn get_device(&self, device_id: &str) -> Device {
+    pub fn get_device(&self, device_id: &str) -> Result<Device> {
         self.device_list
             .get(device_id)
             .cloned()
-            .unwrap_or_else(|| panic!("unknown device_id `{device_id}`"))
+            .ok_or_else(|| anyhow!("unknown device_id `{device_id}`"))
     }
 }

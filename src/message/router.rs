@@ -62,6 +62,18 @@ impl MessageRouter {
         self.route_gpio(targets, GpioOutput::TaskFinished).await
     }
 
+    pub async fn report_error(&self, message: impl Into<String>) -> Vec<Error> {
+        self.route(
+            &ReturnTargets {
+                web: true,
+                uart: false,
+                gpio: None,
+            },
+            &TaskOutput::error(message),
+        )
+        .await
+    }
+
     async fn route_gpio(
         &self,
         targets: &ReturnTargets,

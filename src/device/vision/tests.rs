@@ -1,6 +1,5 @@
 use super::*;
-use crate::config::WebConfig;
-use crate::config::load_config;
+use crate::config::{ColorDetectParams, CrossDetectParams, QrDetectParams, WebConfig, load_config};
 use crate::utils::cv_util::{bgr_to_gray, hsv_inrange, hsv_scalar_factory, roi_circle_mask};
 use crate::web::WebMessage;
 use anyhow::{Context, Result, anyhow};
@@ -34,7 +33,12 @@ fn color_detect_config_from_config() -> Result<ColorDetectConfig> {
         .find(|function| function.function_id == "color_detect")
         .ok_or_else(|| anyhow!("config does not contain function_id=color_detect"))?;
 
-    ColorDetectConfig::from_args_with_camera(&func.legacy_args()?, &camera)
+    let params: ColorDetectParams = func
+        .params
+        .clone()
+        .try_into()
+        .context("invalid color_detect params")?;
+    Ok(ColorDetectConfig::from_params(&params, &camera))
 }
 
 fn qr_detect_config_from_config() -> Result<QrDetectConfig> {
@@ -54,7 +58,12 @@ fn qr_detect_config_from_config() -> Result<QrDetectConfig> {
         .find(|function| function.function_id == "qr_detect")
         .ok_or_else(|| anyhow!("config does not contain function_id=qr_detect"))?;
 
-    QrDetectConfig::from_args_with_camera(&func.legacy_args()?, &camera)
+    let params: QrDetectParams = func
+        .params
+        .clone()
+        .try_into()
+        .context("invalid qr_detect params")?;
+    Ok(QrDetectConfig::from_params(&params, &camera))
 }
 
 fn cross_detect_config_from_config() -> Result<CrossDetectConfig> {
@@ -74,7 +83,12 @@ fn cross_detect_config_from_config() -> Result<CrossDetectConfig> {
         .find(|function| function.function_id == "cross_detect")
         .ok_or_else(|| anyhow!("config does not contain function_id=cross_detect"))?;
 
-    CrossDetectConfig::from_args_with_camera(&func.legacy_args()?, &camera)
+    let params: CrossDetectParams = func
+        .params
+        .clone()
+        .try_into()
+        .context("invalid cross_detect params")?;
+    Ok(CrossDetectConfig::from_params(&params, &camera))
 }
 
 fn configured_device_path(device_id: &str) -> Result<String> {
@@ -94,7 +108,7 @@ fn camera_from_config(cfg: &crate::config::RuntimeConfig, device_id: &str) -> Re
         .iter()
         .find(|device| device.device_id == device_id)
         .ok_or_else(|| anyhow!("config does not contain device_id={device_id}"))?;
-    CameraDevice::from_args(&device.args)
+    Ok(CameraDevice::new(&device.path))
 }
 
 fn configured_color_names() -> Result<Vec<String>> {
@@ -106,12 +120,15 @@ fn configured_color_names() -> Result<Vec<String>> {
         .find(|function| function.function_id == "color_detect")
         .ok_or_else(|| anyhow!("config does not contain function_id=color_detect"))?;
 
-    Ok(func
-        .legacy_args()?
+    let params: ColorDetectParams = func
+        .params
+        .clone()
+        .try_into()
+        .context("invalid color_detect params")?;
+    Ok(params
+        .color_ranges
         .iter()
-        .filter_map(|arg| arg.split_once('='))
-        .filter_map(|(key, _)| key.trim().strip_prefix("color."))
-        .map(ToString::to_string)
+        .map(|range| range.name.clone())
         .collect())
 }
 

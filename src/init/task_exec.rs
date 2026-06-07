@@ -25,20 +25,10 @@ pub fn execute_sync(
     device: Device,
     func_worker: FunctionWorker,
 ) -> Result<(TaskOutput, ReturnTargets)> {
-    let FunctionWorker {
-        func_id,
-        args,
-        func,
-        returns,
-    } = func_worker;
-
-    info!(
-        "{func_id}({args}) is running",
-        func_id = func_id,
-        args = args.join(" ")
-    );
-
-    let result = func(&args, &device, &returns);
+    let func_id = func_worker.func_id.clone();
+    let returns = func_worker.returns.clone();
+    info!("{func_id} is running");
+    let result = func_worker.run(&device)?;
 
     info!("{} has finished execution", func_id);
     Ok((result, returns))
@@ -46,6 +36,7 @@ pub fn execute_sync(
 
 pub async fn execute(router: MessageRouter, device: Device, func: FunctionWorker) -> Result<()> {
     let targets = func.returns.clone();
+    let func_id = func.func_id.clone();
     for error in router.task_started(&targets).await {
         warn!("task pre_func message failed: {error:#}");
     }
@@ -55,10 +46,15 @@ pub async fn execute(router: MessageRouter, device: Device, func: FunctionWorker
         .context("blocking task join failed")
         .and_then(|result| result);
 
-    if let Ok((result, returns)) = &execution {
-        for error in router.route(returns, result).await {
-            warn!("task result message failed: {error:#}");
-        }
+    let routed_output = match &execution {
+        Ok((result, returns)) => (result.clone(), returns.clone()),
+        Err(error) => (
+            TaskOutput::error(format!("{func_id} failed: {error:#}")),
+            targets.clone(),
+        ),
+    };
+    for error in router.route(&routed_output.1, &routed_output.0).await {
+        warn!("task result message failed: {error:#}");
     }
     for error in router.task_finished(&targets).await {
         warn!("task after_func message failed: {error:#}");
@@ -70,6 +66,8 @@ pub async fn execute(router: MessageRouter, device: Device, func: FunctionWorker
 
 #[cfg(test)]
 mod tests {
+    use std::sync::Arc;
+
     use crate::config::ReturnTargets;
     use crate::device::Device;
     use crate::func::FunctionWorker;
@@ -78,22 +76,6 @@ mod tests {
     use tokio::sync::mpsc;
 
     use super::execute;
-
-    fn successful_function(
-        _args: &[String],
-        _device: &Device,
-        _returns: &ReturnTargets,
-    ) -> TaskOutput {
-        TaskOutput::value("task finished", "42")
-    }
-
-    fn panicking_function(
-        _args: &[String],
-        _device: &Device,
-        _returns: &ReturnTargets,
-    ) -> TaskOutput {
-        panic!("test function panic")
-    }
 
     #[tokio::test]
     async fn execute_routes_output_and_gpio_lifecycle() -> Result<()> {
@@ -105,15 +87,15 @@ mod tests {
             Some(UartSink::new(uart_tx)),
             Some(GpioSink::new(gpio_tx)),
         );
+        let returns = ReturnTargets {
+            web: true,
+            uart: true,
+            gpio: Some("color".to_string()),
+        };
         let worker = FunctionWorker::new(
             "test",
-            successful_function,
-            Vec::new(),
-            ReturnTargets {
-                web: true,
-                uart: true,
-                gpio: Some("color".to_string()),
-            },
+            returns,
+            Arc::new(|_device| Ok(TaskOutput::value("task finished", "42"))),
         );
 
         execute(router, Device::None, worker).await?;
@@ -138,15 +120,15 @@ mod tests {
     async fn execute_finishes_gpio_lifecycle_after_function_panic() {
         let (gpio_tx, mut gpio_rx) = mpsc::channel(4);
         let router = MessageRouter::new(None, None, Some(GpioSink::new(gpio_tx)));
+        let returns = ReturnTargets {
+            web: false,
+            uart: false,
+            gpio: Some("color".to_string()),
+        };
         let worker = FunctionWorker::new(
             "panic_test",
-            panicking_function,
-            Vec::new(),
-            ReturnTargets {
-                web: false,
-                uart: false,
-                gpio: Some("color".to_string()),
-            },
+            returns,
+            Arc::new(|_device: &Device| -> Result<TaskOutput> { panic!("test function panic") }),
         );
 
         assert!(execute(router, Device::None, worker).await.is_err());

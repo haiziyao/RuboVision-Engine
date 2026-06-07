@@ -1,4 +1,4 @@
-use crate::config::{DeviceParam, DevicesConfig};
+use crate::config::{DeviceKind, DeviceParam, DevicesConfig};
 use crate::device::usual::*;
 use crate::device::{Device, DeviceMap};
 
@@ -8,16 +8,15 @@ pub fn register_device(config: DevicesConfig) -> DeviceMap {
         let DeviceParam {
             device_id,
             kind,
-            args,
+            path,
         } = device_config;
-        map.add(device_id, device_factory(kind, args));
+        map.add(device_id, device_factory(*kind, path));
     });
     map
 }
 
-fn device_factory(kind: &str, args: &[String]) -> Device {
+fn device_factory(kind: DeviceKind, path: &str) -> Device {
     match kind {
-        "Camera" => register_camera(args),
-        _ => panic!("unknown device kind `{kind}`"),
+        DeviceKind::Camera => register_camera(path),
     }
 }

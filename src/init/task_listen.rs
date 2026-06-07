@@ -31,9 +31,37 @@ impl TaskListener {
             match self.listener.recv().await {
                 Some(event) => {
                     info!("[TaskListener] received event: {:?}", event);
-                    let device = self.dispatcher.find_device(&event);
-                    let func = self.dispatcher.find_func(&event);
                     let router = self.executor.get_router();
+                    let device = match self.dispatcher.find_device(&event) {
+                        Ok(device) => device,
+                        Err(error) => {
+                            tracing::error!("[TaskListener] device dispatch failed: {error:#}");
+                            for route_error in router
+                                .report_error(format!("task dispatch failed: {error:#}"))
+                                .await
+                            {
+                                tracing::error!(
+                                    "[TaskListener] dispatch error message failed: {route_error:#}"
+                                );
+                            }
+                            continue;
+                        }
+                    };
+                    let func = match self.dispatcher.find_func(&event) {
+                        Ok(func) => func,
+                        Err(error) => {
+                            tracing::error!("[TaskListener] function dispatch failed: {error:#}");
+                            for route_error in router
+                                .report_error(format!("task dispatch failed: {error:#}"))
+                                .await
+                            {
+                                tracing::error!(
+                                    "[TaskListener] dispatch error message failed: {route_error:#}"
+                                );
+                            }
+                            continue;
+                        }
+                    };
 
                     tokio::spawn(async move {
                         match execute(router, device, func).await {
