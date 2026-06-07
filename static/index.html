@@ -1,15 +1,30 @@
-﻿<!doctype html>
+<!doctype html>
 <html lang="zh-CN">
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>RuboVision Message Panel</title>
+    <title>RuboVision Control Console</title>
     <style>
         :root {
             color-scheme: light;
-            font-family: "Segoe UI", "PingFang SC", sans-serif;
-            background: #edf3f8;
-            color: #17212b;
+            font-family: Inter, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            --ink: #10212f;
+            --muted: #657582;
+            --line: #d8e1e7;
+            --panel: #ffffff;
+            --canvas: #eef2f4;
+            --navy: #102b3b;
+            --navy-soft: #173c50;
+            --signal: #e27632;
+            --signal-soft: #fff0e5;
+            --success: #19745d;
+            --success-soft: #e4f5ef;
+            --warning: #93630d;
+            --warning-soft: #fff4d6;
+            --danger: #a23c3c;
+            --danger-soft: #fdeaea;
+            background: var(--canvas);
+            color: var(--ink);
         }
 
         * {
@@ -19,227 +34,521 @@
         body {
             margin: 0;
             min-height: 100vh;
-            background: linear-gradient(180deg, #f7fafc 0%, #edf3f8 100%);
+            background: var(--canvas);
+        }
+
+        button {
+            font: inherit;
+        }
+
+        code,
+        .mono {
+            font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+        }
+
+        .topbar {
+            background: var(--navy);
+            color: #fff;
+            border-bottom: 4px solid var(--signal);
+        }
+
+        .topbar-inner {
+            width: min(1380px, calc(100% - 36px));
+            min-height: 76px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 24px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .brand-mark {
+            width: 38px;
+            height: 38px;
+            display: grid;
+            place-items: center;
+            border: 1px solid rgba(255, 255, 255, 0.45);
+            background: var(--signal);
+            color: #fff;
+            font-weight: 900;
+            letter-spacing: -0.08em;
+        }
+
+        .brand h1 {
+            margin: 0;
+            font-size: 20px;
+            letter-spacing: 0.04em;
+        }
+
+        .brand p {
+            margin: 3px 0 0;
+            color: #b8c8d1;
+            font-size: 12px;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .system-state {
+            display: inline-flex;
+            align-items: center;
+            gap: 9px;
+            color: #dbe8ee;
+            font-size: 13px;
+        }
+
+        .state-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #6c7f89;
+            box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.08);
+        }
+
+        .system-state.active .state-dot {
+            background: #51c49d;
         }
 
         .page {
-            max-width: 1160px;
+            width: min(1380px, calc(100% - 36px));
             margin: 0 auto;
-            padding: 28px 18px 40px;
+            padding: 24px 0 42px;
         }
 
-        .hero {
+        .page-intro {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 24px;
             margin-bottom: 18px;
         }
 
-        .hero h1 {
-            margin: 0 0 8px;
-            font-size: 34px;
-            letter-spacing: 0.02em;
+        .eyebrow {
+            margin: 0 0 6px;
+            color: var(--signal);
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
         }
 
-        .hero p {
+        .page-intro h2 {
             margin: 0;
-            color: #5e6d7b;
-            line-height: 1.65;
+            font-size: clamp(25px, 3vw, 38px);
+            letter-spacing: -0.035em;
         }
 
-        .grid {
+        .page-intro-note {
+            max-width: 520px;
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.65;
+            text-align: right;
+        }
+
+        .dashboard {
             display: grid;
-            grid-template-columns: minmax(0, 1.25fr) minmax(340px, 0.9fr);
+            grid-template-columns: minmax(0, 1.55fr) minmax(330px, 0.75fr);
             gap: 18px;
             align-items: start;
         }
 
         .panel {
-            background: #fff;
-            border: 1px solid #d8e2eb;
-            border-radius: 16px;
-            padding: 20px;
-            box-shadow: 0 18px 48px rgba(23, 33, 43, 0.08);
+            background: var(--panel);
+            border: 1px solid var(--line);
+            box-shadow: 0 12px 30px rgba(16, 33, 47, 0.06);
         }
 
-        .panel h2 {
-            margin: 0 0 16px;
-            font-size: 17px;
+        .panel-header {
+            min-height: 58px;
+            padding: 15px 18px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            border-bottom: 1px solid var(--line);
         }
 
-        .status-grid {
+        .panel-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .panel-kicker {
+            color: var(--signal);
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 11px;
+            font-weight: 800;
+        }
+
+        .panel h3 {
+            margin: 0;
+            font-size: 16px;
+        }
+
+        .panel-caption {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .panel-body {
+            padding: 18px;
+        }
+
+        .message-layout {
             display: grid;
-            grid-template-columns: 96px 1fr;
-            gap: 10px 14px;
-            align-items: start;
+            grid-template-columns: minmax(260px, 0.72fr) minmax(0, 1.28fr);
+            gap: 18px;
         }
 
-        .key {
-            color: #647381;
+        .message-data {
+            display: grid;
+            align-content: start;
+            gap: 16px;
+        }
+
+        .status-line {
+            padding-bottom: 15px;
+            border-bottom: 1px solid var(--line);
+        }
+
+        .field-label {
+            display: block;
+            margin-bottom: 7px;
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+
+        .message-text {
+            min-height: 78px;
+            margin: 0;
+            color: var(--ink);
+            font-family: "SFMono-Regular", Consolas, monospace;
             font-size: 14px;
-        }
-
-        .value {
-            min-height: 22px;
-            word-break: break-word;
-            font-family: Consolas, "Courier New", monospace;
+            line-height: 1.65;
+            overflow-wrap: anywhere;
         }
 
         .badge {
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            min-width: 64px;
-            padding: 4px 10px;
+            min-width: 62px;
+            padding: 5px 11px;
+            border: 1px solid #acd6c7;
             border-radius: 999px;
-            font-size: 13px;
-            font-weight: 700;
-            background: #d9e8f7;
-            color: #164672;
+            background: var(--success-soft);
+            color: var(--success);
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 12px;
+            font-weight: 800;
         }
 
         .badge.warn {
-            background: #fff1cc;
-            color: #8b5a00;
+            border-color: #ead59e;
+            background: var(--warning-soft);
+            color: var(--warning);
         }
 
         .badge.error {
-            background: #fde1e1;
-            color: #912b2b;
+            border-color: #edbbbb;
+            background: var(--danger-soft);
+            color: var(--danger);
         }
 
-        .meta {
-            margin-top: 14px;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 12px;
-            color: #667585;
-            font-size: 13px;
-        }
-
-        .metrics {
-            margin-top: 16px;
+        .runtime-meta {
             display: grid;
-            grid-template-columns: repeat(5, minmax(0, 1fr));
-            gap: 10px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 9px;
         }
 
-        .metric-card {
-            border: 1px solid #dde6ee;
-            background: #fbfcfd;
-            border-radius: 12px;
-            padding: 12px;
+        .meta-chip {
+            min-height: 54px;
+            padding: 10px 11px;
+            border-left: 3px solid #b8c5cc;
+            background: #f5f7f8;
         }
 
-        .metric-label {
-            margin-bottom: 8px;
-            color: #667585;
+        .meta-chip strong {
+            display: block;
+            margin-top: 4px;
+            font-family: "SFMono-Regular", Consolas, monospace;
             font-size: 12px;
+            overflow-wrap: anywhere;
         }
 
-        .metric-value {
-            font-size: 24px;
-            font-weight: 700;
-            font-family: Consolas, "Courier New", monospace;
-        }
-
-        .image-box {
-            margin-top: 16px;
-            border: 1px dashed #c7d2dc;
-            border-radius: 12px;
-            background: #fafcfe;
-            padding: 12px;
+        .image-stage {
+            min-height: 350px;
+            border: 1px solid #cad4da;
+            background:
+                linear-gradient(90deg, rgba(16, 43, 59, 0.035) 1px, transparent 1px),
+                linear-gradient(rgba(16, 43, 59, 0.035) 1px, transparent 1px),
+                #f7f9fa;
+            background-size: 24px 24px;
+            position: relative;
+            overflow: hidden;
         }
 
         .image-empty {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 160px;
-            color: #7a8793;
-            font-size: 14px;
+            min-height: 350px;
+            display: grid;
+            place-items: center;
+            padding: 28px;
+            color: #7a8992;
             text-align: center;
+        }
+
+        .image-empty::before {
+            content: "NO FRAME";
+            display: block;
+            margin-bottom: 8px;
+            color: #a0adb4;
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 11px;
+            letter-spacing: 0.15em;
         }
 
         .image-frame {
             display: none;
+            min-height: 350px;
         }
 
         .image-frame.active {
-            display: block;
+            display: flex;
+            flex-direction: column;
         }
 
         .image-frame img {
             width: 100%;
-            max-height: 420px;
-            object-fit: contain;
+            min-height: 300px;
+            max-height: 500px;
+            flex: 1;
             display: block;
-            border-radius: 10px;
-            background: #eef3f7;
+            object-fit: contain;
+            background: #e9eef1;
         }
 
         .image-tip {
-            margin-top: 10px;
-            color: #73808d;
-            font-size: 12px;
-            font-family: Consolas, "Courier New", monospace;
-            word-break: break-all;
+            padding: 9px 11px;
+            border-top: 1px solid var(--line);
+            background: #fff;
+            color: var(--muted);
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 11px;
+            overflow-wrap: anywhere;
         }
 
         .toolbar {
-            margin-top: 16px;
+            margin-top: 18px;
             display: flex;
             flex-wrap: wrap;
+            gap: 9px;
+        }
+
+        .button {
+            min-height: 39px;
+            padding: 9px 14px;
+            border: 1px solid var(--navy);
+            background: var(--navy);
+            color: #fff;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 700;
+            transition: background 120ms ease, border-color 120ms ease, transform 120ms ease;
+        }
+
+        .button:hover:not(:disabled) {
+            background: var(--navy-soft);
+            transform: translateY(-1px);
+        }
+
+        .button.secondary {
+            background: #fff;
+            color: var(--navy);
+        }
+
+        .button.signal {
+            border-color: var(--signal);
+            background: var(--signal);
+        }
+
+        .button.danger {
+            border-color: var(--danger);
+            background: var(--danger);
+        }
+
+        .button:disabled {
+            opacity: 0.48;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .metrics {
+            margin-top: 18px;
+            display: grid;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            gap: 1px;
+            border: 1px solid var(--line);
+            background: var(--line);
+        }
+
+        .metric {
+            min-width: 0;
+            padding: 14px;
+            background: #fff;
+        }
+
+        .metric-label {
+            min-height: 30px;
+            color: var(--muted);
+            font-size: 11px;
+            line-height: 1.35;
+        }
+
+        .metric-value {
+            margin-top: 7px;
+            color: var(--navy);
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: clamp(20px, 2.4vw, 30px);
+            font-weight: 800;
+        }
+
+        .side-stack {
+            display: grid;
+            gap: 18px;
+        }
+
+        .debug-intro {
+            margin: 0 0 14px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .debug-status {
+            min-height: 42px;
+            margin-bottom: 13px;
+            padding: 10px 11px;
+            border-left: 3px solid #aebbc2;
+            background: #f3f6f7;
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.55;
+        }
+
+        .debug-status.success {
+            border-color: var(--success);
+            background: var(--success-soft);
+            color: var(--success);
+        }
+
+        .debug-status.error {
+            border-color: var(--danger);
+            background: var(--danger-soft);
+            color: var(--danger);
+        }
+
+        .debug-task-list {
+            display: grid;
             gap: 10px;
         }
 
-        button {
-            border: 1px solid #23415b;
-            background: #23415b;
-            color: #fff;
-            border-radius: 10px;
-            padding: 10px 16px;
-            cursor: pointer;
-            font-size: 14px;
+        .debug-task {
+            padding: 13px;
+            border: 1px solid var(--line);
+            background: #fbfcfc;
         }
 
-        button.secondary {
-            background: #fff;
-            color: #23415b;
-        }
-
-        button.danger {
-            background: #9b3434;
-            border-color: #9b3434;
-        }
-
-        button:disabled {
-            opacity: 0.55;
-            cursor: not-allowed;
-        }
-
-        .history-head {
+        .debug-task-head {
             display: flex;
+            align-items: start;
             justify-content: space-between;
             gap: 12px;
-            align-items: center;
-            margin-bottom: 12px;
         }
 
-        .history-head small {
-            color: #667585;
+        .debug-source-key {
+            color: var(--signal);
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .debug-task-name {
+            margin-top: 4px;
+            color: var(--ink);
+            font-size: 13px;
+            font-weight: 700;
+            overflow-wrap: anywhere;
+        }
+
+        .debug-task-meta {
+            margin-top: 10px;
+            display: grid;
+            gap: 4px;
+            color: var(--muted);
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 11px;
+            overflow-wrap: anywhere;
+        }
+
+        .debug-task .button {
+            min-height: 34px;
+            padding: 7px 11px;
+            flex: 0 0 auto;
+        }
+
+        .endpoint-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .endpoint {
+            display: grid;
+            grid-template-columns: 48px minmax(0, 1fr);
+            gap: 10px;
+            align-items: center;
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 11px;
+        }
+
+        .method {
+            padding: 4px 6px;
+            background: var(--navy);
+            color: #fff;
+            text-align: center;
+            font-weight: 800;
+        }
+
+        .endpoint-path {
+            color: var(--muted);
+            overflow-wrap: anywhere;
+        }
+
+        .history-panel {
+            grid-column: 1 / -1;
         }
 
         .history-list {
             display: grid;
-            gap: 10px;
-            max-height: 760px;
-            overflow: auto;
-            padding-right: 4px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
         }
 
         .history-item {
-            border: 1px solid #dde6ee;
-            border-radius: 12px;
-            padding: 12px;
-            background: #fbfcfd;
+            min-width: 0;
+            padding: 13px;
+            border: 1px solid var(--line);
+            background: #fbfcfc;
         }
 
         .history-top {
@@ -247,135 +556,303 @@
             justify-content: space-between;
             gap: 10px;
             align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .history-text {
-            margin: 0;
-            line-height: 1.5;
-            color: #1b2834;
-            word-break: break-word;
+            margin-bottom: 10px;
         }
 
         .history-time {
-            color: #73808d;
-            font-size: 12px;
-            font-family: Consolas, "Courier New", monospace;
+            color: var(--muted);
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 11px;
             white-space: nowrap;
         }
 
+        .history-text {
+            min-height: 44px;
+            margin: 0;
+            color: var(--ink);
+            font-size: 13px;
+            line-height: 1.55;
+            overflow-wrap: anywhere;
+        }
+
         .history-tag {
-            margin-top: 8px;
-            color: #667585;
-            font-size: 12px;
-            font-family: Consolas, "Courier New", monospace;
+            margin-top: 10px;
+            color: var(--muted);
+            font-family: "SFMono-Regular", Consolas, monospace;
+            font-size: 10px;
         }
 
         .history-image {
             width: 100%;
-            max-height: 170px;
-            object-fit: contain;
-            display: block;
+            max-height: 180px;
             margin-top: 10px;
-            border: 1px solid #dde6ee;
-            border-radius: 8px;
-            background: #eef3f7;
+            display: block;
+            object-fit: contain;
+            border: 1px solid var(--line);
+            background: #e9eef1;
         }
 
-        @media (max-width: 920px) {
-            .grid {
+        .empty-card {
+            grid-column: 1 / -1;
+            min-height: 100px;
+            display: grid;
+            place-items: center;
+            border: 1px dashed #bdc9cf;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        @media (max-width: 1080px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .history-panel {
+                grid-column: auto;
+            }
+
+            .history-list {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 760px) {
+            .topbar-inner,
+            .page {
+                width: min(100% - 24px, 1380px);
+            }
+
+            .topbar-inner {
+                min-height: 68px;
+            }
+
+            .system-state {
+                display: none;
+            }
+
+            .page-intro {
+                align-items: start;
+                flex-direction: column;
+            }
+
+            .page-intro-note {
+                text-align: left;
+            }
+
+            .message-layout,
+            .history-list {
                 grid-template-columns: 1fr;
             }
 
             .metrics {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
+
+            .metric:last-child {
+                grid-column: 1 / -1;
+            }
         }
 
-        @media (max-width: 560px) {
+        @media (max-width: 480px) {
+            .brand p,
+            .panel-caption {
+                display: none;
+            }
+
+            .panel-header,
+            .panel-body {
+                padding-left: 13px;
+                padding-right: 13px;
+            }
+
+            .runtime-meta,
             .metrics {
                 grid-template-columns: 1fr;
+            }
+
+            .metric:last-child {
+                grid-column: auto;
+            }
+
+            .toolbar .button {
+                width: 100%;
             }
         }
     </style>
 </head>
 <body>
+<header class="topbar">
+    <div class="topbar-inner">
+        <div class="brand">
+            <div class="brand-mark" aria-hidden="true">RV</div>
+            <div>
+                <h1>RuboVision Engine</h1>
+                <p>Message and debug control console</p>
+            </div>
+        </div>
+        <div id="system-state" class="system-state">
+            <span class="state-dot" aria-hidden="true"></span>
+            <span>轮询状态: <strong id="polling-state">已停止</strong></span>
+        </div>
+    </div>
+</header>
+
 <main class="page">
-    <section class="hero">
-        <h1>RuboVision Message Panel</h1>
-        <p>首页轮询 <code>/message</code>，历史记录来自后端内存缓存 <code>/history</code>，启动时从本地 JSONL 恢复最近记录。</p>
+    <section class="page-intro">
+        <div>
+            <p class="eyebrow">Runtime workspace</p>
+            <h2>视觉任务控制台</h2>
+        </div>
+        <p class="page-intro-note">
+            查看当前任务结果与图像，追踪最近消息，并通过配置中的 DebugSource binding
+            模拟外部输入信号。
+        </p>
     </section>
 
-    <section class="grid">
+    <section class="dashboard">
         <article class="panel">
-            <h2>Current Message</h2>
-            <div class="status-grid">
-                <div class="key">状态码</div>
-                <div class="value"><span id="code-badge" class="badge">--</span></div>
-
-                <div class="key">文字信息</div>
-                <div class="value" id="text">等待消息...</div>
-
-                <div class="key">图片状态</div>
-                <div class="value" id="image-state">暂无图片</div>
-            </div>
-
-            <div class="meta">
-                <span>消息轮询：<strong>1500ms</strong></span>
-                <span>历史刷新：<strong>3000ms</strong></span>
-                <span>历史上限：<strong>20</strong></span>
-                <span>接口：<code>/message</code> + <code>/history</code></span>
-                <span>轮询状态：<strong id="polling-state">已停止</strong></span>
-            </div>
-
-            <div class="metrics">
-                <div class="metric-card">
-                    <div class="metric-label">请求总数</div>
-                    <div class="metric-value" id="request-count">0</div>
+            <header class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-kicker">01</span>
+                    <h3>当前消息</h3>
                 </div>
-                <div class="metric-card">
-                    <div class="metric-label">空消息数 (204)</div>
-                    <div class="metric-value" id="empty-count">0</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">无效请求数</div>
-                    <div class="metric-value" id="invalid-count">0</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">有效记录数</div>
-                    <div class="metric-value" id="valid-count">0</div>
-                </div>
-                <div class="metric-card">
-                    <div class="metric-label">历史拉取次数</div>
-                    <div class="metric-value" id="history-sync-count">0</div>
-                </div>
-            </div>
+                <span class="panel-caption mono">GET /message</span>
+            </header>
+            <div class="panel-body">
+                <div class="message-layout">
+                    <div class="message-data">
+                        <div class="status-line">
+                            <span class="field-label">状态码</span>
+                            <span id="code-badge" class="badge">--</span>
+                        </div>
+                        <div class="status-line">
+                            <span class="field-label">文字信息</span>
+                            <p id="text" class="message-text">等待消息...</p>
+                        </div>
+                        <div class="runtime-meta">
+                            <div class="meta-chip">
+                                <span class="field-label">图片状态</span>
+                                <strong id="image-state">暂无图片</strong>
+                            </div>
+                            <div class="meta-chip">
+                                <span class="field-label">消息间隔</span>
+                                <strong>1500 ms</strong>
+                            </div>
+                            <div class="meta-chip">
+                                <span class="field-label">历史间隔</span>
+                                <strong>3000 ms</strong>
+                            </div>
+                            <div class="meta-chip">
+                                <span class="field-label">历史上限</span>
+                                <strong>20 records</strong>
+                            </div>
+                        </div>
+                    </div>
 
-            <div class="image-box">
-                <div id="image-empty" class="image-empty">当前消息没有图片</div>
-                <div id="image-frame" class="image-frame">
-                    <img id="image" alt="message image">
-                    <div id="image-tip" class="image-tip">等待图片数据</div>
+                    <div class="image-stage">
+                        <div id="image-empty" class="image-empty">当前消息没有图片</div>
+                        <div id="image-frame" class="image-frame">
+                            <img id="image" alt="任务返回图像">
+                            <div id="image-tip" class="image-tip">等待图片数据</div>
+                        </div>
+                    </div>
                 </div>
-            </div>
 
-            <div class="toolbar">
-                <button id="start-polling">开始请求</button>
-                <button id="stop-polling" class="danger">停止请求</button>
-                <button id="refresh-now">立即刷新消息</button>
-                <button id="refresh-history" class="secondary">立即同步历史</button>
-                <button id="clear-history" class="secondary">清空本地视图</button>
+                <div class="toolbar" aria-label="消息轮询操作">
+                    <button id="start-polling" class="button signal" type="button">开始轮询</button>
+                    <button id="stop-polling" class="button danger" type="button">停止轮询</button>
+                    <button id="refresh-now" class="button" type="button">刷新消息</button>
+                    <button id="refresh-history" class="button secondary" type="button">同步历史</button>
+                    <button id="clear-history" class="button secondary" type="button">清空本地历史</button>
+                </div>
+
+                <div class="metrics" aria-label="消息统计">
+                    <div class="metric">
+                        <div class="metric-label">请求总数</div>
+                        <div id="request-count" class="metric-value">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">空消息数 (204)</div>
+                        <div id="empty-count" class="metric-value">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">无效请求数</div>
+                        <div id="invalid-count" class="metric-value">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">有效记录数</div>
+                        <div id="valid-count" class="metric-value">0</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-label">历史同步次数</div>
+                        <div id="history-sync-count" class="metric-value">0</div>
+                    </div>
+                </div>
             </div>
         </article>
 
-        <article class="panel">
-            <div class="history-head">
-                <h2>Recent Messages</h2>
-                <small>显示后端缓存的最近 20 条有效消息</small>
-            </div>
-            <div id="history" class="history-list">
-                <div class="history-item">
-                    <p class="history-text">暂无有效记录</p>
+        <aside class="side-stack">
+            <article class="panel">
+                <header class="panel-header">
+                    <div class="panel-title">
+                        <span class="panel-kicker">02</span>
+                        <h3>DebugSource 任务</h3>
+                    </div>
+                    <button id="refresh-debug" class="button secondary" type="button">刷新</button>
+                </header>
+                <div class="panel-body">
+                    <p class="debug-intro">
+                        触发操作仅发送配置中的 <span class="mono">source_key</span>，
+                        后端会按 binding 生成普通任务事件。
+                    </p>
+                    <div id="debug-status" class="debug-status" role="status" aria-live="polite">
+                        正在读取调试任务...
+                    </div>
+                    <div id="debug-task-list" class="debug-task-list">
+                        <div class="empty-card">正在加载 binding</div>
+                    </div>
+                </div>
+            </article>
+
+            <article class="panel">
+                <header class="panel-header">
+                    <div class="panel-title">
+                        <span class="panel-kicker">API</span>
+                        <h3>接口状态</h3>
+                    </div>
+                </header>
+                <div class="panel-body endpoint-list">
+                    <div class="endpoint">
+                        <span class="method">GET</span>
+                        <span class="endpoint-path">/message</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method">GET</span>
+                        <span class="endpoint-path">/history</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method">GET</span>
+                        <span class="endpoint-path">/debug/bindings</span>
+                    </div>
+                    <div class="endpoint">
+                        <span class="method">POST</span>
+                        <span class="endpoint-path">/debug/trigger</span>
+                    </div>
+                </div>
+            </article>
+        </aside>
+
+        <article class="panel history-panel">
+            <header class="panel-header">
+                <div class="panel-title">
+                    <span class="panel-kicker">03</span>
+                    <h3>最近消息</h3>
+                </div>
+                <span class="panel-caption">后端缓存的最近 20 条有效记录</span>
+            </header>
+            <div class="panel-body">
+                <div id="history" class="history-list">
+                    <div class="empty-card">暂无有效记录</div>
                 </div>
             </div>
         </article>
@@ -388,6 +865,7 @@
     const HISTORY_INTERVAL_MS = 3000;
 
     let historyItems = [];
+    let debugBindings = [];
     let totalRequestCount = 0;
     let emptyMessageCount = 0;
     let invalidRequestCount = 0;
@@ -408,6 +886,7 @@
     const imageFrameNode = document.getElementById('image-frame');
     const imageStateNode = document.getElementById('image-state');
     const imageTipNode = document.getElementById('image-tip');
+    const systemStateNode = document.getElementById('system-state');
 
     const requestCountNode = document.getElementById('request-count');
     const emptyCountNode = document.getElementById('empty-count');
@@ -416,12 +895,15 @@
     const historySyncCountNode = document.getElementById('history-sync-count');
     const pollingStateNode = document.getElementById('polling-state');
     const historyNode = document.getElementById('history');
+    const debugTaskListNode = document.getElementById('debug-task-list');
+    const debugStatusNode = document.getElementById('debug-status');
 
     const startPollingButton = document.getElementById('start-polling');
     const stopPollingButton = document.getElementById('stop-polling');
     const refreshNowButton = document.getElementById('refresh-now');
     const refreshHistoryButton = document.getElementById('refresh-history');
     const clearHistoryButton = document.getElementById('clear-history');
+    const refreshDebugButton = document.getElementById('refresh-debug');
 
     function badgeClass(code) {
         if (code >= 500) return 'badge error';
@@ -452,7 +934,11 @@
         const code = Number(data.code ?? 0);
         const text = typeof data.text === 'string' ? data.text.trim() : '';
         const id = Number(data.id ?? 0);
-        return Number.isFinite(code) && code !== 204 && text.length > 0 && Number.isFinite(id) && id > 0;
+        return Number.isFinite(code)
+            && code !== 204
+            && text.length > 0
+            && Number.isFinite(id)
+            && id > 0;
     }
 
     function rememberMessageId(data) {
@@ -464,9 +950,7 @@
 
     function rememberHistoryItems(items) {
         items.forEach(item => {
-            if (isValidMessage(item)) {
-                rememberMessageId(item);
-            }
+            if (isValidMessage(item)) rememberMessageId(item);
         });
     }
 
@@ -495,6 +979,7 @@
         validCountNode.textContent = String(historyItems.length);
         historySyncCountNode.textContent = String(historySyncCount);
         pollingStateNode.textContent = pollingEnabled ? '运行中' : '已停止';
+        systemStateNode.classList.toggle('active', pollingEnabled);
         startPollingButton.disabled = pollingEnabled;
         stopPollingButton.disabled = !pollingEnabled;
     }
@@ -504,12 +989,14 @@
             imageNode.src = data.image;
             imageFrameNode.classList.add('active');
             imageEmptyNode.style.display = 'none';
-            imageStateNode.textContent = data.image.startsWith('data:image/') ? 'base64/data URL 图片' : '普通图片路径';
+            imageStateNode.textContent = data.image.startsWith('data:image/')
+                ? 'data URL 图片'
+                : '普通图片路径';
             imageTipNode.textContent = summarizeImage(data.image);
         } else {
             imageNode.removeAttribute('src');
             imageFrameNode.classList.remove('active');
-            imageEmptyNode.style.display = 'flex';
+            imageEmptyNode.style.display = 'grid';
             imageStateNode.textContent = '暂无图片';
             imageTipNode.textContent = '等待图片数据';
         }
@@ -525,21 +1012,17 @@
 
     function renderHistory() {
         if (!historyItems.length) {
-            historyNode.innerHTML = `
-                <div class="history-item">
-                    <p class="history-text">暂无有效记录</p>
-                </div>
-            `;
+            historyNode.innerHTML = '<div class="empty-card">暂无有效记录</div>';
             return;
         }
 
         historyNode.innerHTML = historyItems.map(item => {
             const imageBlock = item.image
-                ? `<img class="history-image" alt="history image" src="${escapeAttribute(item.image)}">`
+                ? `<img class="history-image" alt="历史任务图像" src="${escapeAttribute(item.image)}">`
                 : '';
 
             return `
-                <div class="history-item">
+                <article class="history-item">
                     <div class="history-top">
                         <span class="${badgeClass(Number(item.code))}">${escapeHtml(String(item.code))}</span>
                         <span class="history-time">${escapeHtml(item.time)}</span>
@@ -547,15 +1030,100 @@
                     <p class="history-text">${escapeHtml(item.text)}</p>
                     <div class="history-tag">id=${escapeHtml(String(item.id))} image=${item.image ? 'yes' : 'no'}</div>
                     ${imageBlock}
-                </div>
+                </article>
             `;
         }).join('');
+    }
+
+    function setDebugStatus(message, kind = '') {
+        debugStatusNode.textContent = message;
+        debugStatusNode.className = `debug-status${kind ? ` ${kind}` : ''}`;
+    }
+
+    function renderDebugBindings() {
+        if (!debugBindings.length) {
+            debugTaskListNode.innerHTML = '<div class="empty-card">没有可用的 DebugSource binding</div>';
+            return;
+        }
+
+        debugTaskListNode.innerHTML = debugBindings.map((binding, index) => `
+            <article class="debug-task">
+                <div class="debug-task-head">
+                    <div>
+                        <div class="debug-source-key">${escapeHtml(binding.source_key)}</div>
+                        <div class="debug-task-name">${escapeHtml(binding.task_id)}</div>
+                    </div>
+                    <button class="button signal debug-trigger" type="button" data-binding-index="${index}">
+                        触发
+                    </button>
+                </div>
+                <div class="debug-task-meta">
+                    <span>device=${escapeHtml(binding.device_id)}</span>
+                    <span>function=${escapeHtml(binding.function_id)}</span>
+                </div>
+            </article>
+        `).join('');
+
+        debugTaskListNode.querySelectorAll('.debug-trigger').forEach(button => {
+            button.addEventListener('click', () => {
+                const index = Number(button.dataset.bindingIndex);
+                const binding = debugBindings[index];
+                if (binding) triggerDebugTask(binding, button);
+            });
+        });
+    }
+
+    async function loadDebugBindings() {
+        refreshDebugButton.disabled = true;
+        setDebugStatus('正在读取调试任务...');
+        try {
+            const response = await fetch('/debug/bindings', { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const data = await response.json();
+            debugBindings = Array.isArray(data) ? data : [];
+            renderDebugBindings();
+            setDebugStatus(`已加载 ${debugBindings.length} 个调试任务`, 'success');
+        } catch (error) {
+            debugBindings = [];
+            renderDebugBindings();
+            setDebugStatus(`读取 binding 失败: ${error}`, 'error');
+        } finally {
+            refreshDebugButton.disabled = false;
+        }
+    }
+
+    async function triggerDebugTask(binding, button) {
+        button.disabled = true;
+        setDebugStatus(`正在触发 source_key=${binding.source_key}...`);
+        try {
+            const response = await fetch('/debug/trigger', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ source_key: binding.source_key }),
+            });
+            const body = await response.text();
+            if (!response.ok) {
+                throw new Error(body || `HTTP ${response.status}`);
+            }
+            const result = body ? JSON.parse(body) : {};
+            setDebugStatus(
+                `任务已接受: ${result.task_id ?? binding.task_id}`,
+                'success',
+            );
+        } catch (error) {
+            setDebugStatus(`触发失败: ${error}`, 'error');
+        } finally {
+            button.disabled = false;
+        }
     }
 
     async function requestMessage() {
         totalRequestCount += 1;
         updateCounters();
         const response = await fetch('/message', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
     }
 
@@ -563,6 +1131,7 @@
         historySyncCount += 1;
         updateCounters();
         const response = await fetch('/history', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return await response.json();
     }
 
@@ -741,9 +1310,11 @@
     refreshNowButton.addEventListener('click', fetchOnce);
     refreshHistoryButton.addEventListener('click', fetchHistoryOnce);
     clearHistoryButton.addEventListener('click', clearLocalHistoryView);
+    refreshDebugButton.addEventListener('click', loadDebugBindings);
 
     renderHistory();
     updateCounters();
+    loadDebugBindings();
 </script>
 </body>
 </html>
