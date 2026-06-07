@@ -8,6 +8,20 @@ use anyhow::anyhow;
 use log::warn;
 use tracing::{debug, info};
 
+const UART_FRAME_HEAD: u8 = 0xAA;
+const UART_FRAME_TAIL: u8 = 0x55;
+const UART_FRAME_LEN: usize = 3;
+const UART_PENDING_MAX_LEN: usize = 64;
+const UART_COMMAND_STOP_RESERVED: u8 = 0x04;
+const UART_COMMAND_STATUS_RESERVED: u8 = 0x05;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum UartCommandKind {
+    Task(u8),
+    ReservedStop,
+    ReservedStatus,
+}
+
 #[derive(Default)]
 pub struct UartSource {
     pub base: BaseSource,
@@ -46,14 +60,16 @@ impl UartSource {
             return Ok(());
         };
 
-        let binding_map: HashMap<String, UartBinding> = uart_binding
+        let binding_map: HashMap<u8, UartBinding> = uart_binding
             .into_iter()
-            .map(|binding| (binding.source_key.to_string(), binding))
+            .map(|binding| (binding.source_key, binding))
             .collect();
 
         let mut uart = uart_config.open_uart()?;
         let mut buffer = [0u8; 64];
-        let mut pending = String::new();
+        // UART is a byte stream, so reads can split or combine frames. Keep
+        // pending bytes until complete frames can be synchronized and parsed.
+        let mut pending = Vec::new();
 
         info!(
             "UartSource listening on {} with {} command binding(s)",
@@ -67,8 +83,7 @@ impl UartSource {
                     tokio::time::sleep(Duration::from_millis(20)).await;
                 }
                 Ok(n) => {
-                    let chunk = String::from_utf8_lossy(&buffer[..n]);
-                    pending.push_str(&chunk);
+                    pending.extend_from_slice(&buffer[..n]);
                     self.dispatch_pending_commands(&mut pending, &binding_map)
                         .await;
                 }
@@ -82,32 +97,29 @@ impl UartSource {
 
     async fn dispatch_pending_commands(
         &self,
-        pending: &mut String,
-        binding_map: &HashMap<String, UartBinding>,
+        pending: &mut Vec<u8>,
+        binding_map: &HashMap<u8, UartBinding>,
     ) {
-        while let Some(pos) = pending.find(['\n', '\r']) {
-            let command = pending[..pos].trim().to_string();
-            pending.drain(..=pos);
-            if !command.is_empty() {
-                self.dispatch_command(&command, binding_map).await;
-            }
-        }
-
-        let command = pending.trim_matches(char::is_control).trim().to_string();
-        if binding_map.contains_key(&command) {
-            pending.clear();
-            self.dispatch_command(&command, binding_map).await;
-        } else if pending.len() > 256 {
-            warn!("UartSource pending command buffer too long, clearing it");
-            pending.clear();
-        } else {
-            debug!("UartSource pending command buffer: {:?}", pending);
+        for command in take_uart_commands(pending) {
+            self.dispatch_command(command, binding_map).await;
         }
     }
 
-    async fn dispatch_command(&self, command: &str, binding_map: &HashMap<String, UartBinding>) {
-        let Some(bind) = binding_map.get(command) else {
-            warn!("UartSource ignored unknown command {:?}", command);
+    async fn dispatch_command(&self, command: u8, binding_map: &HashMap<u8, UartBinding>) {
+        match classify_uart_command(command) {
+            UartCommandKind::ReservedStop => {
+                info!("UartSource received reserved stop command 0x04");
+                return;
+            }
+            UartCommandKind::ReservedStatus => {
+                info!("UartSource received reserved status command 0x05");
+                return;
+            }
+            UartCommandKind::Task(_) => {}
+        }
+
+        let Some(bind) = binding_map.get(&command) else {
+            warn!("UartSource ignored unknown command 0x{command:02X}");
             return;
         };
 
@@ -117,7 +129,10 @@ impl UartSource {
             bind.device_id.as_str(),
         );
 
-        info!("UartSource dispatching command {:?} as {:?}", command, bind);
+        info!(
+            "UartSource dispatching command 0x{command:02X} as {:?}",
+            bind
+        );
 
         match self.send(event).await {
             Ok(()) => info!("UartSource sent event {:?}", bind),
@@ -126,9 +141,71 @@ impl UartSource {
     }
 }
 
+fn classify_uart_command(command: u8) -> UartCommandKind {
+    match command {
+        UART_COMMAND_STOP_RESERVED => UartCommandKind::ReservedStop,
+        UART_COMMAND_STATUS_RESERVED => UartCommandKind::ReservedStatus,
+        command => UartCommandKind::Task(command),
+    }
+}
+
+fn take_uart_commands(pending: &mut Vec<u8>) -> Vec<u8> {
+    if pending.len() > UART_PENDING_MAX_LEN {
+        warn!(
+            "UartSource pending frame buffer too long ({} bytes), clearing it",
+            pending.len()
+        );
+        pending.clear();
+        return Vec::new();
+    }
+
+    let mut commands = Vec::new();
+    loop {
+        let Some(head_pos) = pending.iter().position(|&byte| byte == UART_FRAME_HEAD) else {
+            if !pending.is_empty() {
+                debug!(
+                    "UartSource dropping bytes without frame head: {:?}",
+                    pending
+                );
+                pending.clear();
+            }
+            break;
+        };
+
+        if head_pos > 0 {
+            debug!(
+                "UartSource dropping noise bytes before frame head: {:?}",
+                &pending[..head_pos]
+            );
+            pending.drain(..head_pos);
+        }
+
+        if pending.len() < UART_FRAME_LEN {
+            break;
+        }
+
+        if pending[2] != UART_FRAME_TAIL {
+            warn!(
+                "UartSource invalid frame tail, dropping one byte: {:?}",
+                &pending[..UART_FRAME_LEN]
+            );
+            pending.drain(..1);
+            continue;
+        }
+
+        commands.push(pending[1]);
+        pending.drain(..UART_FRAME_LEN);
+    }
+
+    commands
+}
+
 #[cfg(test)]
 mod tests {
-    use super::UartSource;
+    use super::{
+        UART_PENDING_MAX_LEN, UartCommandKind, UartSource, classify_uart_command,
+        take_uart_commands,
+    };
     use crate::config::binding::UartBinding;
     use crate::device::{ResponseDeviceConfig, UartDeviceConfig, send_response_line};
     use crate::source::{Event, Source};
@@ -254,6 +331,49 @@ mod tests {
         }
     }
 
+    #[test]
+    fn uart_frame_parser_preserves_partial_frame() {
+        let mut pending = vec![0xAA, 0x01];
+
+        assert!(take_uart_commands(&mut pending).is_empty());
+        assert_eq!(pending, vec![0xAA, 0x01]);
+
+        pending.push(0x55);
+        assert_eq!(take_uart_commands(&mut pending), vec![0x01]);
+        assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn uart_frame_parser_handles_multiple_frames() {
+        let mut pending = vec![0xAA, 0x01, 0x55, 0xAA, 0x02, 0x55];
+
+        assert_eq!(take_uart_commands(&mut pending), vec![0x01, 0x02]);
+        assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn uart_frame_parser_drops_noise_and_recovers_from_bad_tail() {
+        let mut pending = vec![0x00, 0x99, 0xAA, 0x01, 0x00, 0xAA, 0x03, 0x55];
+
+        assert_eq!(take_uart_commands(&mut pending), vec![0x03]);
+        assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn uart_frame_parser_clears_oversized_pending_data() {
+        let mut pending = vec![0xAA; UART_PENDING_MAX_LEN + 1];
+
+        assert!(take_uart_commands(&mut pending).is_empty());
+        assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn uart_reserved_commands_are_classified_without_task_dispatch() {
+        assert_eq!(classify_uart_command(0x04), UartCommandKind::ReservedStop);
+        assert_eq!(classify_uart_command(0x05), UartCommandKind::ReservedStatus);
+        assert_eq!(classify_uart_command(0x01), UartCommandKind::Task(0x01));
+    }
+
     #[tokio::test]
     async fn test_uart_source_receives_command_from_virtual_serial() -> Result<()> {
         let Some(pair) = VirtualSerialPair::new("rx")? else {
@@ -276,7 +396,7 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         let mut peer = pair.open_peer_write()?;
-        peer.write_all(b"1\n")?;
+        peer.write_all(&[0xAA, 0x01, 0x55])?;
         peer.flush()?;
 
         let event = tokio::time::timeout(Duration::from_secs(2), rx.recv())
