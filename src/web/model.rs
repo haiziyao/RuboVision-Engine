@@ -1,5 +1,24 @@
 use tracing::{debug, info};
 
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct DebugBindingView {
+    pub source_key: String,
+    pub task_id: String,
+    pub device_id: String,
+    pub function_id: String,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct DebugTriggerRequest {
+    pub source_key: String,
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct DebugTriggerResponse {
+    pub accepted: bool,
+    pub task_id: String,
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct WebMessage {
     #[serde(default)]

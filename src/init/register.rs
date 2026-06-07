@@ -1,6 +1,6 @@
 use crate::config::BindingsConfig;
 use crate::device::DeviceMap;
-use crate::source::{Event, LoopSource, Source, TimerSource, UartSource, WebSource};
+use crate::source::{Event, LoopSource, Source, TimerSource, UartSource};
 
 use crate::func::FuncWorkerMap;
 use crate::init::{TaskDispatcher, TaskExecutor, TaskListener};
@@ -20,7 +20,7 @@ pub fn register_source(
         uart_source,
         timer_source,
         loop_source,
-        debug_source,
+        debug_source: _,
     } = bindings_config;
     info!("Source initializing ...");
     if !uart_source.is_empty() {
@@ -58,19 +58,6 @@ pub fn register_source(
             }
         });
     }
-
-    // TODO: 后期需要加上web调试的东西，所以会加一个 tokio::sync::mpsc::channel
-    if !debug_source.is_empty() {
-        let mut web_sourcer = WebSource::new();
-        web_sourcer.set_sender(tx.clone());
-        info!("WebSource set to {:?}", debug_source);
-        tokio::spawn(async move {
-            if let Err(e) = web_sourcer.start(debug_source).await {
-                error!("WebSource work failed: {e:#}");
-            }
-        });
-    }
-
     info!("All the Source has been registered");
     Ok(())
 }

@@ -240,7 +240,7 @@ async fn test_start_web_for_vision_result() -> Result<()> {
     println!("starting original vision web server: {url}");
     println!("keep this test running, then run a vision web result test in another terminal");
     let _keep_sender = tx;
-    crate::web::run(config, rx).await
+    crate::web::run(config, rx, None).await
 }
 
 #[test]
@@ -625,7 +625,7 @@ fn start_original_web_for_test(config: &WebConfig) -> Result<()> {
 
         runtime.block_on(async move {
             let (_tx, rx) = mpsc::channel::<WebMessage>(32);
-            if let Err(e) = crate::web::run(config, rx).await {
+            if let Err(e) = crate::web::run(config, rx, None).await {
                 eprintln!("vision web server failed: {e:#}");
             }
         });

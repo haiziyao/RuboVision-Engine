@@ -9,7 +9,7 @@ use crate::func::register_func;
 use crate::init::register_source;
 use crate::init::{init_logging, register_listener};
 use crate::message::{MessageRouter, UartSink, WebSink, start_gpio_sink, start_uart_transport};
-use crate::source::Event;
+use crate::source::{DebugSource, Event};
 use crate::web::WebMessage;
 
 mod config;
@@ -62,6 +62,8 @@ pub async fn run() -> Result<()> {
 
     // TODO: use bindings_config to register
     let (source_sender, listener_receiver) = mpsc::channel::<Event>(32);
+    let debug_source =
+        DebugSource::new(bindings_config.debug_source.clone(), source_sender.clone());
     match register_source(bindings_config, source_sender, uart_incoming)
         .with_context(|| "Start Failed ... caused by register_source")
     {
@@ -114,7 +116,7 @@ pub async fn run() -> Result<()> {
         info!("Web Channel starting ...");
         let _web_handler = tokio::spawn(async move {
             info!("Web handler starting...");
-            let _ = web::run(web_config, returner_receiver).await;
+            let _ = web::run(web_config, returner_receiver, Some(debug_source)).await;
         });
     } else {
         info!("Web Debugger disabled ... draining task messages to logs");

@@ -1,5 +1,6 @@
 use super::WebMessage;
 use crate::config::WebConfig;
+use crate::source::DebugSource;
 use crate::web::router::router;
 use crate::web::state::WebState;
 use anyhow::{Context, Result};
@@ -16,8 +17,15 @@ async fn consume_web_messages(mut rx: mpsc::Receiver<WebMessage>, state: WebStat
     info!(target: "web", "Web message channel closed");
 }
 
-pub async fn run(config: WebConfig, rx: mpsc::Receiver<WebMessage>) -> Result<()> {
-    let state = WebState::new(20, "logs/web_messages.jsonl").await?;
+pub async fn run(
+    config: WebConfig,
+    rx: mpsc::Receiver<WebMessage>,
+    debug_source: Option<DebugSource>,
+) -> Result<()> {
+    let mut state = WebState::new(20, "logs/web_messages.jsonl").await?;
+    if let Some(debug_source) = debug_source {
+        state = state.with_debug_source(debug_source);
+    }
 
     let consumer_state = state.clone();
     tokio::spawn(async move {
@@ -63,7 +71,7 @@ mod tests {
         let (tx, rx) = mpsc::channel::<WebMessage>(32);
 
         let handler = tokio::spawn(async move {
-            let _ = run(config, rx).await;
+            let _ = run(config, rx, None).await;
         });
 
         info!("open http://127.0.0.1:3000");

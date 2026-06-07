@@ -9,6 +9,8 @@ use tokio::io::AsyncWriteExt;
 use tokio::sync::{RwLock, mpsc};
 use tracing::{debug, info, warn};
 
+use crate::source::DebugSource;
+
 use super::model::WebMessage;
 
 #[derive(Clone)]
@@ -17,6 +19,7 @@ pub struct WebState {
     history_limit: usize,
     next_id: Arc<AtomicU64>,
     persistence_tx: Option<mpsc::Sender<WebMessage>>,
+    debug_source: Option<DebugSource>,
 }
 
 struct WebCache {
@@ -49,6 +52,7 @@ impl WebState {
             history_limit,
             next_id: Arc::new(AtomicU64::new(next_id)),
             persistence_tx: Some(tx),
+            debug_source: None,
         })
     }
 
@@ -62,7 +66,17 @@ impl WebState {
             history_limit,
             next_id: Arc::new(AtomicU64::new(1)),
             persistence_tx: None,
+            debug_source: None,
         }
+    }
+
+    pub fn with_debug_source(mut self, debug_source: DebugSource) -> Self {
+        self.debug_source = Some(debug_source);
+        self
+    }
+
+    pub fn debug_source(&self) -> Option<&DebugSource> {
+        self.debug_source.as_ref()
     }
 
     pub async fn push_message(&self, msg: WebMessage) {
