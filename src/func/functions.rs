@@ -6,10 +6,11 @@ use tracing::debug;
 
 use crate::config::{ColorDetectParams, CrossDetectParams, DebugParams, QrDetectParams};
 use crate::device::{
-    CameraDevice, ColorDetectConfig, CrossDetectConfig, QrDetectConfig, run_color_detect,
-    run_cross_detect, run_qr_detect,
+    CameraDevice, ColorDetectConfig, ColorDetectOutput, CrossDetectConfig, QrDetectConfig,
+    run_color_detect_with_frame, run_cross_detect, run_qr_detect,
 };
 use crate::func::{FunctionResult, NoDevice, ValidateParams, declare_functions};
+use crate::utils::web_tools::mat_to_jpeg_data_url;
 
 impl ValidateParams for ColorDetectParams {
     fn validate(&self) -> Result<()> {
@@ -70,10 +71,16 @@ impl ValidateParams for DebugParams {
 
 fn color_detect(params: &ColorDetectParams, camera: &CameraDevice) -> Result<FunctionResult> {
     let config = ColorDetectConfig::from_params(params, camera);
-    let value = run_color_detect(&config)?;
-    Ok(FunctionResult::value(
-        format!("color_detect finished: {value}"),
-        value,
+    let value = run_color_detect_with_frame(&config)?;
+    color_detect_output_to_function_result(value)
+}
+
+fn color_detect_output_to_function_result(output: ColorDetectOutput) -> Result<FunctionResult> {
+    let image = mat_to_jpeg_data_url(&output.frame)?;
+    Ok(FunctionResult::value_with_image(
+        format!("color_detect finished: {}", output.color),
+        output.color,
+        image,
     ))
 }
 
@@ -109,4 +116,37 @@ declare_functions! {
     qr_detect(params: QrDetectParams, device: CameraDevice) => qr_detect,
     cross_detect(params: CrossDetectParams, device: CameraDevice) => cross_detect,
     debug_fun(params: DebugParams, device: NoDevice) => debug_fun,
+}
+
+#[cfg(test)]
+mod tests {
+    use opencv::{core, prelude::*};
+
+    use crate::device::ColorDetectOutput;
+
+    use super::*;
+
+    #[test]
+    fn color_detect_output_to_function_result_attaches_image() -> Result<()> {
+        let frame = Mat::new_rows_cols_with_default(
+            8,
+            8,
+            core::CV_8UC3,
+            core::Scalar::new(0.0, 0.0, 255.0, 0.0),
+        )?;
+        let result = color_detect_output_to_function_result(ColorDetectOutput {
+            color: "red".to_string(),
+            frame,
+        })?;
+
+        assert_eq!(result.text, "color_detect finished: red");
+        assert_eq!(result.value.as_deref(), Some("red"));
+        assert!(
+            result
+                .image
+                .as_deref()
+                .is_some_and(|image| image.starts_with("data:image/jpeg;base64,"))
+        );
+        Ok(())
+    }
 }

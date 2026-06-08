@@ -25,6 +25,19 @@ impl TaskOutput {
         }
     }
 
+    pub fn value_with_image(
+        text: impl Into<String>,
+        value: impl Into<String>,
+        image: impl Into<String>,
+    ) -> Self {
+        Self {
+            code: 200,
+            text: text.into(),
+            value: Some(value.into()),
+            image: Some(image.into()),
+        }
+    }
+
     pub fn error(text: impl Into<String>) -> Self {
         Self {
             code: 500,
@@ -32,6 +45,25 @@ impl TaskOutput {
             value: None,
             image: None,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::TaskOutput;
+
+    #[test]
+    fn value_with_image_sets_value_and_web_image_payload() {
+        let output = TaskOutput::value_with_image(
+            "color_detect finished: red",
+            "red",
+            "data:image/jpeg;base64,abc",
+        );
+
+        assert_eq!(output.code, 200);
+        assert_eq!(output.text, "color_detect finished: red");
+        assert_eq!(output.value.as_deref(), Some("red"));
+        assert_eq!(output.image.as_deref(), Some("data:image/jpeg;base64,abc"));
     }
 }
 

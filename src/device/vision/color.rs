@@ -28,6 +28,11 @@ pub(super) struct ColorRangeAnalysis {
     pub(super) result: Mat,
 }
 
+pub struct ColorDetectOutput {
+    pub color: String,
+    pub frame: Mat,
+}
+
 struct StableColorTracker {
     best_color: String,
     count: i32,
@@ -58,7 +63,7 @@ impl StableColorTracker {
     }
 }
 
-pub fn run_color_detect(config: &ColorDetectConfig) -> Result<String> {
+pub fn run_color_detect_with_frame(config: &ColorDetectConfig) -> Result<ColorDetectOutput> {
     let mut cam = register_color_camera(config)?;
     let mut tracker = StableColorTracker::new(config.loop_count);
 
@@ -75,16 +80,23 @@ pub fn run_color_detect(config: &ColorDetectConfig) -> Result<String> {
             draw_debug_info(&mut frame, &color_name, ratio, config.radius_ratio)?;
             let key = highgui::wait_key(1)?;
             if key == 113 || key == 27 {
-                break;
+                return Ok(ColorDetectOutput {
+                    color: String::new(),
+                    frame,
+                });
             }
         }
 
         if let Some(result) = tracker.observe(color_name) {
-            return Ok(result);
+            if !config.debug_model {
+                draw_color_overlay(&mut frame, &result, ratio, config.radius_ratio)?;
+            }
+            return Ok(ColorDetectOutput {
+                color: result,
+                frame,
+            });
         }
     }
-
-    Ok(String::new())
 }
 
 pub(super) fn analyze_color_frame(
@@ -171,7 +183,12 @@ fn draw_label(frame: &mut Mat, text: &str, x: i32, y: i32) -> Result<()> {
     Ok(())
 }
 
-fn draw_debug_info(frame: &mut Mat, color_name: &str, ratio: f64, radius_ratio: f64) -> Result<()> {
+fn draw_color_overlay(
+    frame: &mut Mat,
+    color_name: &str,
+    ratio: f64,
+    radius_ratio: f64,
+) -> Result<()> {
     let size = frame.size()?;
     let w = size.width;
     let h = size.height;
@@ -190,7 +207,11 @@ fn draw_debug_info(frame: &mut Mat, color_name: &str, ratio: f64, radius_ratio: 
     )?;
 
     let label = format!("color: {}  ratio: {:.2}", color_name, ratio);
-    draw_label(frame, &label, 10, 30)?;
+    draw_label(frame, &label, 10, 30)
+}
+
+fn draw_debug_info(frame: &mut Mat, color_name: &str, ratio: f64, radius_ratio: f64) -> Result<()> {
+    draw_color_overlay(frame, color_name, ratio, radius_ratio)?;
     highgui::imshow("color_detect", frame)?;
     Ok(())
 }

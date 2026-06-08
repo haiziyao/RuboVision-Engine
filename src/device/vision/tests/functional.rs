@@ -1,6 +1,6 @@
 use anyhow::Result;
 
-use super::super::{run_color_detect, run_cross_detect, run_qr_detect};
+use super::super::{run_color_detect_with_frame, run_cross_detect, run_qr_detect};
 use super::support::{
     color_detect_config_from_config, cross_detect_config_from_config, qr_detect_config_from_config,
 };
@@ -10,8 +10,8 @@ use super::support::{
 fn color_detect_function_from_config() -> Result<()> {
     let config = color_detect_config_from_config()?;
 
-    let result = run_color_detect(&config)?;
-    println!("color_detect result: {result}");
+    let result = run_color_detect_with_frame(&config)?;
+    println!("color_detect result: {}", result.color);
     Ok(())
 }
 
