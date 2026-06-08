@@ -28,11 +28,39 @@ pub(super) struct ColorRangeAnalysis {
     pub(super) result: Mat,
 }
 
+struct StableColorTracker {
+    best_color: String,
+    count: i32,
+    stable_count: i32,
+}
+
+impl StableColorTracker {
+    fn new(stable_count: i32) -> Self {
+        Self {
+            best_color: String::new(),
+            count: 0,
+            stable_count,
+        }
+    }
+
+    fn observe(&mut self, color_name: String) -> Option<String> {
+        if self.count == 0 {
+            self.best_color = color_name;
+            self.count = 1;
+        } else if self.best_color == color_name {
+            self.count += 1;
+        } else {
+            self.best_color.clear();
+            self.count = 0;
+        }
+
+        (self.count >= self.stable_count).then(|| self.best_color.clone())
+    }
+}
+
 pub fn run_color_detect(config: &ColorDetectConfig) -> Result<String> {
     let mut cam = register_color_camera(config)?;
-    let mut best_color = String::new();
-    let mut count = 0;
-    let stable_count = config.loop_count;
+    let mut tracker = StableColorTracker::new(config.loop_count);
 
     loop {
         let mut frame = core::Mat::default();
@@ -49,21 +77,10 @@ pub fn run_color_detect(config: &ColorDetectConfig) -> Result<String> {
             if key == 113 || key == 27 {
                 break;
             }
-            continue;
         }
 
-        if count == 0 {
-            best_color = color_name;
-            count = 1;
-        } else if best_color == color_name {
-            count += 1;
-        } else {
-            best_color.clear();
-            count = 0;
-        }
-
-        if count >= stable_count {
-            return Ok(best_color);
+        if let Some(result) = tracker.observe(color_name) {
+            return Ok(result);
         }
     }
 
@@ -219,5 +236,14 @@ mod tests {
         assert!(core::count_non_zero(&red_step.mask_in_circle)? > 0);
         assert!(!red_step.result.empty());
         Ok(())
+    }
+
+    #[test]
+    fn stable_color_tracker_returns_result_after_required_repeats() {
+        let mut tracker = StableColorTracker::new(3);
+
+        assert_eq!(tracker.observe("red".to_string()), None);
+        assert_eq!(tracker.observe("red".to_string()), None);
+        assert_eq!(tracker.observe("red".to_string()), Some("red".to_string()));
     }
 }
