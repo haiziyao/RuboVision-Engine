@@ -14,6 +14,7 @@ pub use device::DevicesConfig;
 pub use func::FunctionEntryConfig;
 pub use func::FunctionsConfig;
 pub use func::ReturnTargets;
+pub use r#type::BlackRingDetectParams;
 pub use r#type::ColorDetectParams;
 pub use r#type::CrossDetectParams;
 pub use r#type::DebugParams;

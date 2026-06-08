@@ -147,6 +147,24 @@ pub struct ColorRangeConfig {
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct TargetCorrectionConfig {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct BlackRingDetectParams {
+    pub debug_model: bool,
+    pub loop_count: i32,
+    pub target_correction: TargetCorrectionConfig,
+    pub black_threshold: i32,
+    pub min_radius: f64,
+    pub max_radius: f64,
+    pub min_circularity: f64,
+    pub min_score: u8,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct QrDetectParams {
     pub debug_model: bool,
 }

@@ -1,3 +1,4 @@
+mod black_ring;
 mod config;
 mod cv_steps;
 mod functional;

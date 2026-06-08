@@ -23,6 +23,20 @@ returns = { web = true, uart = true, gpio = "qr" }
 debug_model = false
 
 [[functions.entries]]
+function_id = "black_ring_detect"
+returns = { web = true, uart = true }
+
+[functions.entries.params]
+debug_model = false
+loop_count = 3
+target_correction = { x = 0, y = 0 }
+black_threshold = 90
+min_radius = 20.0
+max_radius = 180.0
+min_circularity = 0.65
+min_score = 50
+
+[[functions.entries]]
 function_id = "cross_detect"
 returns = { web = true, uart = false }
 

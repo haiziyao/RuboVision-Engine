@@ -39,7 +39,13 @@ mod tests {
 
         assert_eq!(
             ids,
-            vec!["color_detect", "qr_detect", "cross_detect", "debug_fun"]
+            vec![
+                "color_detect",
+                "qr_detect",
+                "black_ring_detect",
+                "cross_detect",
+                "debug_fun"
+            ]
         );
     }
 

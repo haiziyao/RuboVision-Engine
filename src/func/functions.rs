@@ -4,10 +4,13 @@ use std::time::Duration;
 use anyhow::{Result, anyhow};
 use tracing::debug;
 
-use crate::config::{ColorDetectParams, CrossDetectParams, DebugParams, QrDetectParams};
+use crate::config::{
+    BlackRingDetectParams, ColorDetectParams, CrossDetectParams, DebugParams, QrDetectParams,
+};
 use crate::device::{
-    CameraDevice, ColorDetectConfig, ColorDetectOutput, CrossDetectConfig, QrDetectConfig,
-    run_color_detect_with_frame, run_cross_detect, run_qr_detect,
+    BlackRingDetectConfig, BlackRingDetectOutput, CameraDevice, ColorDetectConfig,
+    ColorDetectOutput, CrossDetectConfig, QrDetectConfig, format_black_ring_value,
+    run_black_ring_detect_with_frame, run_color_detect_with_frame, run_cross_detect, run_qr_detect,
 };
 use crate::func::{FunctionResult, NoDevice, ValidateParams, declare_functions};
 use crate::utils::web_tools::mat_to_jpeg_data_url;
@@ -54,6 +57,32 @@ impl ValidateParams for QrDetectParams {
     }
 }
 
+impl ValidateParams for BlackRingDetectParams {
+    fn validate(&self) -> Result<()> {
+        if self.loop_count <= 0 {
+            return Err(anyhow!("loop_count must be greater than 0"));
+        }
+        if !(0..=255).contains(&self.black_threshold) {
+            return Err(anyhow!("black_threshold must be in [0, 255]"));
+        }
+        if self.min_radius <= 0.0 {
+            return Err(anyhow!("min_radius must be greater than 0"));
+        }
+        if self.max_radius < self.min_radius {
+            return Err(anyhow!(
+                "max_radius must be greater than or equal to min_radius"
+            ));
+        }
+        if !(0.0..=1.0).contains(&self.min_circularity) {
+            return Err(anyhow!("min_circularity must be in [0, 1]"));
+        }
+        if self.min_score > 100 {
+            return Err(anyhow!("min_score must be in [0, 100]"));
+        }
+        Ok(())
+    }
+}
+
 impl ValidateParams for CrossDetectParams {
     fn validate(&self) -> Result<()> {
         Ok(())
@@ -93,6 +122,25 @@ fn qr_detect(params: &QrDetectParams, camera: &CameraDevice) -> Result<FunctionR
     ))
 }
 
+fn black_ring_detect(
+    params: &BlackRingDetectParams,
+    camera: &CameraDevice,
+) -> Result<FunctionResult> {
+    let config = BlackRingDetectConfig::from_params(params, camera);
+    let value = run_black_ring_detect_with_frame(&config)?;
+    black_ring_output_to_function_result(value)
+}
+
+fn black_ring_output_to_function_result(output: BlackRingDetectOutput) -> Result<FunctionResult> {
+    let image = mat_to_jpeg_data_url(&output.frame)?;
+    let value = format_black_ring_value(&output.result);
+    Ok(FunctionResult::value_with_image(
+        format!("black_ring_detect finished: {value}"),
+        value,
+        image,
+    ))
+}
+
 fn cross_detect(_params: &CrossDetectParams, camera: &CameraDevice) -> Result<FunctionResult> {
     let config = CrossDetectConfig::from_params(_params, camera);
     let value = run_cross_detect(&config)?;
@@ -114,6 +162,7 @@ fn debug_fun(params: &DebugParams, _device: &NoDevice) -> Result<FunctionResult>
 declare_functions! {
     color_detect(params: ColorDetectParams, device: CameraDevice) => color_detect,
     qr_detect(params: QrDetectParams, device: CameraDevice) => qr_detect,
+    black_ring_detect(params: BlackRingDetectParams, device: CameraDevice) => black_ring_detect,
     cross_detect(params: CrossDetectParams, device: CameraDevice) => cross_detect,
     debug_fun(params: DebugParams, device: NoDevice) => debug_fun,
 }
@@ -122,7 +171,7 @@ declare_functions! {
 mod tests {
     use opencv::{core, prelude::*};
 
-    use crate::device::ColorDetectOutput;
+    use crate::device::{BlackRingResult, ColorDetectOutput};
 
     use super::*;
 
@@ -141,6 +190,37 @@ mod tests {
 
         assert_eq!(result.text, "color_detect finished: red");
         assert_eq!(result.value.as_deref(), Some("red"));
+        assert!(
+            result
+                .image
+                .as_deref()
+                .is_some_and(|image| image.starts_with("data:image/jpeg;base64,"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn black_ring_output_to_function_result_keeps_uart_value_and_image() -> Result<()> {
+        let frame = Mat::new_rows_cols_with_default(
+            8,
+            8,
+            core::CV_8UC3,
+            core::Scalar::new(255.0, 255.0, 255.0, 0.0),
+        )?;
+        let result = black_ring_output_to_function_result(BlackRingDetectOutput {
+            result: BlackRingResult {
+                valid: true,
+                center: None,
+                radius: 0.0,
+                dx: -42,
+                dy: 18,
+                score: 87,
+            },
+            frame,
+        })?;
+
+        assert_eq!(result.text, "black_ring_detect finished: RING,1,-42,18,87");
+        assert_eq!(result.value.as_deref(), Some("RING,1,-42,18,87"));
         assert!(
             result
                 .image

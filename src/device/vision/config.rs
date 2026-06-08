@@ -1,4 +1,4 @@
-use crate::config::{ColorDetectParams, CrossDetectParams, QrDetectParams};
+use crate::config::{BlackRingDetectParams, ColorDetectParams, CrossDetectParams, QrDetectParams};
 
 #[derive(Debug, Clone)]
 pub struct CameraDevice {
@@ -45,6 +45,44 @@ impl ColorDetectConfig {
 pub struct ColorRange {
     pub name: String,
     pub hsv: [i32; 6],
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TargetCorrection {
+    pub x: i32,
+    pub y: i32,
+}
+
+#[derive(Debug, Clone)]
+pub struct BlackRingDetectConfig {
+    pub path: String,
+    pub debug_model: bool,
+    pub loop_count: i32,
+    pub target_correction: TargetCorrection,
+    pub black_threshold: i32,
+    pub min_radius: f64,
+    pub max_radius: f64,
+    pub min_circularity: f64,
+    pub min_score: u8,
+}
+
+impl BlackRingDetectConfig {
+    pub fn from_params(params: &BlackRingDetectParams, camera: &CameraDevice) -> Self {
+        Self {
+            path: camera.path.clone(),
+            debug_model: params.debug_model,
+            loop_count: params.loop_count,
+            target_correction: TargetCorrection {
+                x: params.target_correction.x,
+                y: params.target_correction.y,
+            },
+            black_threshold: params.black_threshold,
+            min_radius: params.min_radius,
+            max_radius: params.max_radius,
+            min_circularity: params.min_circularity,
+            min_score: params.min_score,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

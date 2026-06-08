@@ -21,6 +21,12 @@ source_key = 3
 device_id = "cross_camera"
 function_id = "cross_detect"
 
+[[bindings.uart_source]]
+task_id = "uart_black_ring_detect"
+source_key = 4
+device_id = "color_camera"
+function_id = "black_ring_detect"
+
 [[bindings.debug_source]]
 task_id = "debug_color_detect"
 source_key = "color"
@@ -38,6 +44,12 @@ task_id = "debug_cross_detect"
 source_key = "cross"
 device_id = "cross_camera"
 function_id = "cross_detect"
+
+[[bindings.debug_source]]
+task_id = "debug_black_ring_detect"
+source_key = "ring"
+device_id = "color_camera"
+function_id = "black_ring_detect"
 
 # Debug loop source.
 # 启动后先发送一次 debug_fun，之后 LoopSource 每 5 秒发送一次 DebugEvent。

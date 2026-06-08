@@ -3,9 +3,10 @@ use opencv::{core, highgui, prelude::*};
 
 use crate::utils::cv_util::{hsv_inrange, roi_circle_mask};
 
-use super::super::color::analyze_color_frame;
+use super::super::{analyze_black_ring_frame, color::analyze_color_frame};
 use super::support::{
-    color_detect_config_from_config, draw_label, open_camera, read_non_empty_frame,
+    black_ring_detect_config_from_config, color_detect_config_from_config, draw_label, open_camera,
+    read_non_empty_frame,
 };
 
 #[test]
@@ -132,6 +133,49 @@ fn tune_hsv_thresholds_from_config() -> Result<()> {
                 current_hsv[4],
                 current_hsv[5]
             );
+            break;
+        }
+    }
+
+    Ok(())
+}
+
+#[test]
+#[ignore = "requires camera and GUI; shows black ring steps and prints target_correction on q/ESC"]
+fn find_black_ring_target_correction_from_config() -> Result<()> {
+    let config = black_ring_detect_config_from_config()?;
+    let mut cam = open_camera(&config.path)?;
+    let mut last_recommendation = None;
+
+    highgui::named_window("black_ring/frame", highgui::WINDOW_NORMAL)?;
+    highgui::named_window("black_ring/gray", highgui::WINDOW_NORMAL)?;
+    highgui::named_window("black_ring/black_mask", highgui::WINDOW_NORMAL)?;
+    highgui::named_window("black_ring/annotated", highgui::WINDOW_NORMAL)?;
+
+    loop {
+        let frame = read_non_empty_frame(&mut cam)?;
+        let size = frame.size()?;
+        let analysis = analyze_black_ring_frame(&frame, &config)?;
+
+        if let Some(center) = analysis.result.center {
+            last_recommendation = Some((
+                center.x.round() as i32 - size.width / 2,
+                center.y.round() as i32 - size.height / 2,
+            ));
+        }
+
+        highgui::imshow("black_ring/frame", &frame)?;
+        highgui::imshow("black_ring/gray", &analysis.gray)?;
+        highgui::imshow("black_ring/black_mask", &analysis.black_mask)?;
+        highgui::imshow("black_ring/annotated", &analysis.annotated)?;
+
+        let key = highgui::wait_key(1)?;
+        if key == 113 || key == 27 {
+            if let Some((x, y)) = last_recommendation {
+                println!("target_correction = {{ x = {x}, y = {y} }}");
+            } else {
+                println!("black ring not detected; target_correction unavailable");
+            }
             break;
         }
     }

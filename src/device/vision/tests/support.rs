@@ -9,10 +9,13 @@ use opencv::{
 };
 
 use crate::config::{
-    ColorDetectParams, CrossDetectParams, QrDetectParams, RuntimeConfig, WebConfig, load_config,
+    BlackRingDetectParams, ColorDetectParams, CrossDetectParams, QrDetectParams, RuntimeConfig,
+    WebConfig, load_config,
 };
 
-use super::super::{CameraDevice, ColorDetectConfig, CrossDetectConfig, QrDetectConfig};
+use super::super::{
+    BlackRingDetectConfig, CameraDevice, ColorDetectConfig, CrossDetectConfig, QrDetectConfig,
+};
 
 pub(super) fn color_detect_config_from_config() -> Result<ColorDetectConfig> {
     let cfg = load_config().context("failed to load runtime config")?;
@@ -40,6 +43,20 @@ pub(super) fn qr_detect_config_from_config() -> Result<QrDetectConfig> {
 
     let params: QrDetectParams = function_params(&cfg, "qr_detect")?;
     Ok(QrDetectConfig::from_params(&params, &camera))
+}
+
+pub(super) fn black_ring_detect_config_from_config() -> Result<BlackRingDetectConfig> {
+    let cfg = load_config().context("failed to load runtime config")?;
+    let mut camera = camera_from_config(&cfg, "color_camera")?;
+    if let Ok(override_path) = env::var("RUBO_TEST_BLACK_RING_CAMERA") {
+        camera.path = override_path;
+    }
+    if let Ok(override_path) = env::var("RUBO_TEST_CAMERA") {
+        camera.path = override_path;
+    }
+
+    let params: BlackRingDetectParams = function_params(&cfg, "black_ring_detect")?;
+    Ok(BlackRingDetectConfig::from_params(&params, &camera))
 }
 
 pub(super) fn cross_detect_config_from_config() -> Result<CrossDetectConfig> {
