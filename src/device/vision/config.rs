@@ -101,14 +101,58 @@ impl QrDetectConfig {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct CrossDetectConfig {
     pub path: String,
+    pub debug_model: bool,
+    pub loop_count: i32,
+    pub target_correction: TargetCorrection,
+    pub black_threshold: i32,
+    pub min_radius: f64,
+    pub max_radius: f64,
+    pub center_tolerance: f64,
+    pub min_arc_points: usize,
+    pub min_ring_score: u8,
+    pub colors: Vec<CrossColor>,
+}
+
+#[derive(Debug, Clone)]
+#[allow(dead_code)]
+pub struct CrossColor {
+    pub id: u8,
+    pub name: String,
+    pub hsv: [i32; 6],
+    pub min_area: f64,
+    pub min_circularity: f64,
 }
 
 impl CrossDetectConfig {
-    pub fn from_params(_params: &CrossDetectParams, camera: &CameraDevice) -> Self {
+    pub fn from_params(params: &CrossDetectParams, camera: &CameraDevice) -> Self {
         Self {
             path: camera.path.clone(),
+            debug_model: params.debug_model,
+            loop_count: params.loop_count,
+            target_correction: TargetCorrection {
+                x: params.target_correction.x,
+                y: params.target_correction.y,
+            },
+            black_threshold: params.black_threshold,
+            min_radius: params.min_radius,
+            max_radius: params.max_radius,
+            center_tolerance: params.center_tolerance,
+            min_arc_points: params.min_arc_points,
+            min_ring_score: params.min_ring_score,
+            colors: params
+                .colors
+                .iter()
+                .map(|color| CrossColor {
+                    id: color.id,
+                    name: color.name.clone(),
+                    hsv: color.hsv,
+                    min_area: color.min_area,
+                    min_circularity: color.min_circularity,
+                })
+                .collect(),
         }
     }
 }

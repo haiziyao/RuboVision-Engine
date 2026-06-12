@@ -19,7 +19,7 @@ function_id = "qr_detect"
 task_id = "uart_cross_detect"
 source_key = 3
 device_id = "cross_camera"
-function_id = "cross_detect"
+function_id = "cross"
 
 [[bindings.uart_source]]
 task_id = "uart_black_ring_detect"
@@ -43,7 +43,7 @@ function_id = "qr_detect"
 task_id = "debug_cross_detect"
 source_key = "cross"
 device_id = "cross_camera"
-function_id = "cross_detect"
+function_id = "cross"
 
 [[bindings.debug_source]]
 task_id = "debug_black_ring_detect"

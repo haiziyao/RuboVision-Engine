@@ -169,8 +169,28 @@ pub struct QrDetectParams {
     pub debug_model: bool,
 }
 
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
-pub struct CrossDetectParams {}
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CrossColorConfig {
+    pub id: u8,
+    pub name: String,
+    pub hsv: [i32; 6],
+    pub min_area: f64,
+    pub min_circularity: f64,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct CrossDetectParams {
+    pub debug_model: bool,
+    pub loop_count: i32,
+    pub target_correction: TargetCorrectionConfig,
+    pub black_threshold: i32,
+    pub min_radius: f64,
+    pub max_radius: f64,
+    pub center_tolerance: f64,
+    pub min_arc_points: usize,
+    pub min_ring_score: u8,
+    pub colors: Vec<CrossColorConfig>,
+}
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct DebugParams {

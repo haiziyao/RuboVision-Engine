@@ -37,10 +37,26 @@ min_circularity = 0.65
 min_score = 50
 
 [[functions.entries]]
-function_id = "cross_detect"
-returns = { web = true, uart = false }
+function_id = "cross"
+returns = { web = true, uart = true }
 
 [functions.entries.params]
+debug_model = false
+loop_count = 3
+target_correction = { x = 0, y = 0 }
+black_threshold = 90
+min_radius = 20.0
+max_radius = 600.0
+center_tolerance = 14.0
+min_arc_points = 24
+min_ring_score = 50
+colors = [
+    { id = 1, name = "red", hsv = [0, 20, 100, 255, 80, 255], min_area = 500.0, min_circularity = 0.60 },
+    { id = 2, name = "blue", hsv = [90, 140, 80, 255, 50, 255], min_area = 500.0, min_circularity = 0.60 },
+    { id = 3, name = "green", hsv = [35, 90, 70, 255, 50, 255], min_area = 500.0, min_circularity = 0.60 },
+    { id = 4, name = "black", hsv = [0, 179, 0, 255, 0, 70], min_area = 500.0, min_circularity = 0.60 },
+    { id = 5, name = "white", hsv = [0, 179, 0, 60, 140, 255], min_area = 500.0, min_circularity = 0.60 },
+]
 
 [[functions.entries]]
 function_id = "debug_fun"

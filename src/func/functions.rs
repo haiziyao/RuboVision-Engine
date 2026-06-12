@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::thread::sleep;
 use std::time::Duration;
 
@@ -85,6 +86,68 @@ impl ValidateParams for BlackRingDetectParams {
 
 impl ValidateParams for CrossDetectParams {
     fn validate(&self) -> Result<()> {
+        if self.loop_count <= 0 {
+            return Err(anyhow!("loop_count must be greater than 0"));
+        }
+        if !(0..=255).contains(&self.black_threshold) {
+            return Err(anyhow!("black_threshold must be in [0, 255]"));
+        }
+        if self.min_radius <= 0.0 {
+            return Err(anyhow!("min_radius must be greater than 0"));
+        }
+        if self.max_radius < self.min_radius {
+            return Err(anyhow!(
+                "max_radius must be greater than or equal to min_radius"
+            ));
+        }
+        if self.center_tolerance <= 0.0 {
+            return Err(anyhow!("center_tolerance must be greater than 0"));
+        }
+        if self.min_arc_points < 5 {
+            return Err(anyhow!("min_arc_points must be at least 5"));
+        }
+        if self.min_ring_score > 100 {
+            return Err(anyhow!("min_ring_score must be in [0, 100]"));
+        }
+
+        let ids: HashSet<u8> = self.colors.iter().map(|color| color.id).collect();
+        if ids != HashSet::from([1, 2, 3, 4, 5]) || self.colors.len() != 5 {
+            return Err(anyhow!(
+                "cross colors must contain unique ids 1 through 5"
+            ));
+        }
+
+        for color in &self.colors {
+            if color.name.trim().is_empty() {
+                return Err(anyhow!("cross color name must not be empty"));
+            }
+            if color.min_area <= 0.0 {
+                return Err(anyhow!(
+                    "cross color `{}` min_area must be greater than 0",
+                    color.name
+                ));
+            }
+            if !(0.0..=1.0).contains(&color.min_circularity) {
+                return Err(anyhow!(
+                    "cross color `{}` min_circularity must be in [0, 1]",
+                    color.name
+                ));
+            }
+
+            let [h_min, h_max, s_min, s_max, v_min, v_max] = color.hsv;
+            if !(0..=179).contains(&h_min)
+                || !(0..=179).contains(&h_max)
+                || !(0..=255).contains(&s_min)
+                || !(0..=255).contains(&s_max)
+                || !(0..=255).contains(&v_min)
+                || !(0..=255).contains(&v_max)
+                || h_min > h_max
+                || s_min > s_max
+                || v_min > v_max
+            {
+                return Err(anyhow!("invalid HSV range for `{}`", color.name));
+            }
+        }
         Ok(())
     }
 }
@@ -150,15 +213,15 @@ fn black_ring_output_to_function_result(output: BlackRingDetectOutput) -> Result
     ))
 }
 
-fn cross_detect(
-    _params: &CrossDetectParams,
+fn cross(
+    params: &CrossDetectParams,
     _runtime_param: u8,
     camera: &CameraDevice,
 ) -> Result<FunctionResult> {
-    let config = CrossDetectConfig::from_params(_params, camera);
+    let config = CrossDetectConfig::from_params(params, camera);
     let value = run_cross_detect(&config)?;
     Ok(FunctionResult::value(
-        format!("cross_detect finished: {value}"),
+        format!("cross finished: {value}"),
         value,
     ))
 }
@@ -180,7 +243,7 @@ declare_functions! {
     color_detect(params: ColorDetectParams, device: CameraDevice) => color_detect,
     qr_detect(params: QrDetectParams, device: CameraDevice) => qr_detect,
     black_ring_detect(params: BlackRingDetectParams, device: CameraDevice) => black_ring_detect,
-    cross_detect(params: CrossDetectParams, device: CameraDevice) => cross_detect,
+    cross(params: CrossDetectParams, device: CameraDevice) => cross,
     debug_fun(params: DebugParams, device: NoDevice) => debug_fun,
 }
 

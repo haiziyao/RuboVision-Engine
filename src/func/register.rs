@@ -43,7 +43,7 @@ mod tests {
                 "color_detect",
                 "qr_detect",
                 "black_ring_detect",
-                "cross_detect",
+                "cross",
                 "debug_fun"
             ]
         );
@@ -87,6 +87,46 @@ mod tests {
             .as_table_mut()
             .expect("color params table")
             .insert("radius_ratio".to_string(), toml::Value::Float(2.0));
+
+        assert!(register_func(functions).is_err());
+    }
+
+    #[test]
+    fn register_func_rejects_invalid_cross_radius_order() {
+        let mut functions = load_config().expect("load config").functions;
+        let cross = functions
+            .entries
+            .iter_mut()
+            .find(|entry| entry.function_id == "cross")
+            .expect("cross config");
+        cross
+            .params
+            .as_table_mut()
+            .expect("cross params table")
+            .insert("min_radius".to_string(), toml::Value::Float(700.0));
+
+        assert!(register_func(functions).is_err());
+    }
+
+    #[test]
+    fn register_func_rejects_duplicate_cross_color_ids() {
+        let mut functions = load_config().expect("load config").functions;
+        let cross = functions
+            .entries
+            .iter_mut()
+            .find(|entry| entry.function_id == "cross")
+            .expect("cross config");
+        let colors = cross
+            .params
+            .as_table_mut()
+            .expect("cross params table")
+            .get_mut("colors")
+            .and_then(toml::Value::as_array_mut)
+            .expect("cross colors");
+        colors[4]
+            .as_table_mut()
+            .expect("cross color table")
+            .insert("id".to_string(), toml::Value::Integer(1));
 
         assert!(register_func(functions).is_err());
     }

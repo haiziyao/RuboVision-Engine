@@ -41,5 +41,15 @@ fn cross_detect_config_from_config_file() -> Result<()> {
     let config = cross_detect_config_from_config()?;
 
     assert_eq!(config.path, configured_device_path("cross_camera")?);
+    assert_eq!(config.target_correction.x, 0);
+    assert_eq!(config.target_correction.y, 0);
+    assert_eq!(
+        config
+            .colors
+            .iter()
+            .map(|color| color.id)
+            .collect::<Vec<_>>(),
+        vec![1, 2, 3, 4, 5]
+    );
     Ok(())
 }

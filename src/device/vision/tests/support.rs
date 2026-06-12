@@ -69,7 +69,7 @@ pub(super) fn cross_detect_config_from_config() -> Result<CrossDetectConfig> {
         camera.path = override_path;
     }
 
-    let params: CrossDetectParams = function_params(&cfg, "cross_detect")?;
+    let params: CrossDetectParams = function_params(&cfg, "cross")?;
     Ok(CrossDetectConfig::from_params(&params, &camera))
 }
 
