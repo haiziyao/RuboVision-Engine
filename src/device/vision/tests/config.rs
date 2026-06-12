@@ -3,7 +3,7 @@ use anyhow::Result;
 use super::support::{
     black_ring_detect_config_from_config, color_detect_config_from_config, configured_color_names,
     configured_device_path, cross_detect_config_from_config, parse_cross_runtime_param,
-    qr_detect_config_from_config,
+    qr_detect_config_from_config, vision_test_override_env_names,
 };
 
 #[test]
@@ -62,4 +62,14 @@ fn cross_runtime_param_accepts_only_zero_through_five() -> Result<()> {
     assert!(parse_cross_runtime_param("6").is_err());
     assert!(parse_cross_runtime_param("red").is_err());
     Ok(())
+}
+
+#[test]
+fn vision_test_override_names_do_not_collide_with_runtime_config_prefix() {
+    for name in vision_test_override_env_names() {
+        assert!(
+            !name.starts_with("RUBO_"),
+            "{name} would be parsed as runtime configuration"
+        );
+    }
 }

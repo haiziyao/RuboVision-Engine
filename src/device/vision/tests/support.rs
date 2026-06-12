@@ -17,13 +17,20 @@ use super::super::{
     BlackRingDetectConfig, CameraDevice, ColorDetectConfig, CrossDetectConfig, QrDetectConfig,
 };
 
+const TEST_CAMERA_ENV: &str = "RV_TEST_CAMERA";
+const TEST_COLOR_CAMERA_ENV: &str = "RV_TEST_COLOR_CAMERA";
+const TEST_QR_CAMERA_ENV: &str = "RV_TEST_QR_CAMERA";
+const TEST_BLACK_RING_CAMERA_ENV: &str = "RV_TEST_BLACK_RING_CAMERA";
+const TEST_CROSS_CAMERA_ENV: &str = "RV_TEST_CROSS_CAMERA";
+const TEST_CROSS_PARAM_ENV: &str = "RV_TEST_CROSS_PARAM";
+
 pub(super) fn color_detect_config_from_config() -> Result<ColorDetectConfig> {
     let cfg = load_config().context("failed to load runtime config")?;
     let mut camera = camera_from_config(&cfg, "color_camera")?;
-    if let Ok(override_path) = env::var("RUBO_TEST_COLOR_CAMERA") {
+    if let Ok(override_path) = env::var(TEST_COLOR_CAMERA_ENV) {
         camera.path = override_path;
     }
-    if let Ok(override_path) = env::var("RUBO_TEST_CAMERA") {
+    if let Ok(override_path) = env::var(TEST_CAMERA_ENV) {
         camera.path = override_path;
     }
 
@@ -34,10 +41,10 @@ pub(super) fn color_detect_config_from_config() -> Result<ColorDetectConfig> {
 pub(super) fn qr_detect_config_from_config() -> Result<QrDetectConfig> {
     let cfg = load_config().context("failed to load runtime config")?;
     let mut camera = camera_from_config(&cfg, "qr_camera")?;
-    if let Ok(override_path) = env::var("RUBO_TEST_QR_CAMERA") {
+    if let Ok(override_path) = env::var(TEST_QR_CAMERA_ENV) {
         camera.path = override_path;
     }
-    if let Ok(override_path) = env::var("RUBO_TEST_CAMERA") {
+    if let Ok(override_path) = env::var(TEST_CAMERA_ENV) {
         camera.path = override_path;
     }
 
@@ -48,10 +55,10 @@ pub(super) fn qr_detect_config_from_config() -> Result<QrDetectConfig> {
 pub(super) fn black_ring_detect_config_from_config() -> Result<BlackRingDetectConfig> {
     let cfg = load_config().context("failed to load runtime config")?;
     let mut camera = camera_from_config(&cfg, "color_camera")?;
-    if let Ok(override_path) = env::var("RUBO_TEST_BLACK_RING_CAMERA") {
+    if let Ok(override_path) = env::var(TEST_BLACK_RING_CAMERA_ENV) {
         camera.path = override_path;
     }
-    if let Ok(override_path) = env::var("RUBO_TEST_CAMERA") {
+    if let Ok(override_path) = env::var(TEST_CAMERA_ENV) {
         camera.path = override_path;
     }
 
@@ -62,10 +69,10 @@ pub(super) fn black_ring_detect_config_from_config() -> Result<BlackRingDetectCo
 pub(super) fn cross_detect_config_from_config() -> Result<CrossDetectConfig> {
     let cfg = load_config().context("failed to load runtime config")?;
     let mut camera = camera_from_config(&cfg, "cross_camera")?;
-    if let Ok(override_path) = env::var("RUBO_TEST_CROSS_CAMERA") {
+    if let Ok(override_path) = env::var(TEST_CROSS_CAMERA_ENV) {
         camera.path = override_path;
     }
-    if let Ok(override_path) = env::var("RUBO_TEST_CAMERA") {
+    if let Ok(override_path) = env::var(TEST_CAMERA_ENV) {
         camera.path = override_path;
     }
 
@@ -84,11 +91,22 @@ pub(super) fn parse_cross_runtime_param(value: &str) -> Result<u8> {
 }
 
 pub(super) fn cross_runtime_param_from_env() -> Result<u8> {
-    match env::var("RUBO_TEST_CROSS_PARAM") {
+    match env::var(TEST_CROSS_PARAM_ENV) {
         Ok(value) => parse_cross_runtime_param(&value),
         Err(env::VarError::NotPresent) => Ok(0),
-        Err(error) => Err(error).context("RUBO_TEST_CROSS_PARAM is not valid Unicode"),
+        Err(error) => Err(error).context("RV_TEST_CROSS_PARAM is not valid Unicode"),
     }
+}
+
+pub(super) fn vision_test_override_env_names() -> [&'static str; 6] {
+    [
+        TEST_CAMERA_ENV,
+        TEST_COLOR_CAMERA_ENV,
+        TEST_QR_CAMERA_ENV,
+        TEST_BLACK_RING_CAMERA_ENV,
+        TEST_CROSS_CAMERA_ENV,
+        TEST_CROSS_PARAM_ENV,
+    ]
 }
 
 pub(super) fn configured_device_path(device_id: &str) -> Result<String> {
@@ -115,7 +133,10 @@ pub(super) fn open_camera(path: &str) -> Result<videoio::VideoCapture> {
     let cam = videoio::VideoCapture::from_file(path, videoio::CAP_V4L2)
         .with_context(|| format!("failed to open camera {path}"))?;
     if !videoio::VideoCapture::is_opened(&cam)? {
-        return Err(anyhow!("camera is not opened: {path}"));
+        return Err(anyhow!(
+            "camera is not opened: {path}; close Cheese/OBS/browser camera sessions, \
+             verify it is a Video Capture node, or override it with RV_TEST_CAMERA"
+        ));
     }
     Ok(cam)
 }

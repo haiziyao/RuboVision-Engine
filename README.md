@@ -301,16 +301,19 @@ Cross 摄像头调试窗口会同时显示原图、灰度图、黑环掩膜、�
 `Esc` 退出：
 
 ```bash
-RUBO_TEST_CROSS_CAMERA=/dev/video2 RUBO_TEST_CROSS_PARAM=0 \
+RV_TEST_CROSS_CAMERA=/dev/video2 RV_TEST_CROSS_PARAM=0 \
   cargo test show_cross_detect_cv_steps_from_config -- --ignored --nocapture
 ```
 
 把结果和标注图发送到 Web 时也使用同一参数：
 
 ```bash
-RUBO_TEST_CROSS_PARAM=1 \
+RV_TEST_CROSS_PARAM=1 \
   cargo test cross_detect_result_to_web_with_base64 -- --ignored --nocapture
 ```
+
+如果提示摄像头无法打开，先关闭 Cheese、OBS、浏览器摄像头页面等占用程序，可用
+`fuser -v /dev/video2` 查看占用进程。
 
 ## 已知保留项
 
