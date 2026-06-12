@@ -73,7 +73,7 @@ pub async fn debug_trigger(
     };
 
     match source.trigger(request.source_key.trim()).await {
-        Ok(Event::UsualEvent(task_id, _, _)) => (
+        Ok(Event::UsualEvent { task_id, .. }) => (
             StatusCode::ACCEPTED,
             Json(DebugTriggerResponse {
                 accepted: true,
@@ -169,7 +169,13 @@ mod tests {
             serde_json::from_slice(&body).expect("accepted response");
         assert!(accepted.accepted);
         assert_eq!(accepted.task_id, "debug_color_detect");
-        assert!(matches!(rx.recv().await, Some(Event::UsualEvent(..))));
+        assert!(matches!(
+            rx.recv().await,
+            Some(Event::UsualEvent {
+                runtime_param: 0,
+                ..
+            })
+        ));
 
         let missing = debug_trigger(
             State(state),

@@ -98,7 +98,11 @@ impl ValidateParams for DebugParams {
     }
 }
 
-fn color_detect(params: &ColorDetectParams, camera: &CameraDevice) -> Result<FunctionResult> {
+fn color_detect(
+    params: &ColorDetectParams,
+    _runtime_param: u8,
+    camera: &CameraDevice,
+) -> Result<FunctionResult> {
     let config = ColorDetectConfig::from_params(params, camera);
     let value = run_color_detect_with_frame(&config)?;
     color_detect_output_to_function_result(value)
@@ -113,7 +117,11 @@ fn color_detect_output_to_function_result(output: ColorDetectOutput) -> Result<F
     ))
 }
 
-fn qr_detect(params: &QrDetectParams, camera: &CameraDevice) -> Result<FunctionResult> {
+fn qr_detect(
+    params: &QrDetectParams,
+    _runtime_param: u8,
+    camera: &CameraDevice,
+) -> Result<FunctionResult> {
     let config = QrDetectConfig::from_params(params, camera);
     let value = run_qr_detect(&config)?;
     Ok(FunctionResult::value(
@@ -124,6 +132,7 @@ fn qr_detect(params: &QrDetectParams, camera: &CameraDevice) -> Result<FunctionR
 
 fn black_ring_detect(
     params: &BlackRingDetectParams,
+    _runtime_param: u8,
     camera: &CameraDevice,
 ) -> Result<FunctionResult> {
     let config = BlackRingDetectConfig::from_params(params, camera);
@@ -141,7 +150,11 @@ fn black_ring_output_to_function_result(output: BlackRingDetectOutput) -> Result
     ))
 }
 
-fn cross_detect(_params: &CrossDetectParams, camera: &CameraDevice) -> Result<FunctionResult> {
+fn cross_detect(
+    _params: &CrossDetectParams,
+    _runtime_param: u8,
+    camera: &CameraDevice,
+) -> Result<FunctionResult> {
     let config = CrossDetectConfig::from_params(_params, camera);
     let value = run_cross_detect(&config)?;
     Ok(FunctionResult::value(
@@ -150,7 +163,11 @@ fn cross_detect(_params: &CrossDetectParams, camera: &CameraDevice) -> Result<Fu
     ))
 }
 
-fn debug_fun(params: &DebugParams, _device: &NoDevice) -> Result<FunctionResult> {
+fn debug_fun(
+    params: &DebugParams,
+    _runtime_param: u8,
+    _device: &NoDevice,
+) -> Result<FunctionResult> {
     debug!("debug Function executing");
     sleep(Duration::from_secs(5));
     Ok(FunctionResult::ok(format!(

@@ -38,7 +38,12 @@ impl DebugSource {
             .bindings
             .get(source_key)
             .ok_or_else(|| DebugSourceError::UnknownSourceKey(source_key.to_string()))?;
-        let event = make_event_usual(&binding.task_id, &binding.function_id, &binding.device_id);
+        let event = make_event_usual(
+            &binding.task_id,
+            &binding.function_id,
+            &binding.device_id,
+            0,
+        );
         self.sender
             .send(event.clone())
             .await
@@ -91,11 +96,12 @@ mod tests {
 
         assert_eq!(
             event,
-            Event::UsualEvent(
-                "debug_color_detect".to_string(),
-                "color_detect".to_string(),
-                "color_camera".to_string(),
-            )
+            Event::UsualEvent {
+                task_id: "debug_color_detect".to_string(),
+                function_id: "color_detect".to_string(),
+                device_id: "color_camera".to_string(),
+                runtime_param: 0,
+            }
         );
         assert_eq!(rx.recv().await, Some(event));
     }

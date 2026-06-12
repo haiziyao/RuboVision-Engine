@@ -114,6 +114,7 @@ impl UartSource {
             bind.task_id.as_str(),
             bind.function_id.as_str(),
             bind.device_id.as_str(),
+            0,
         );
 
         info!(
@@ -401,11 +402,12 @@ mod tests {
             .context("uart event channel closed")?;
         assert_eq!(
             event,
-            Event::UsualEvent(
-                "uart_test_task".to_string(),
-                "color_detect".to_string(),
-                "uart_test_camera".to_string()
-            )
+            Event::UsualEvent {
+                task_id: "uart_test_task".to_string(),
+                function_id: "color_detect".to_string(),
+                device_id: "uart_test_camera".to_string(),
+                runtime_param: 0,
+            }
         );
 
         source_task.abort();

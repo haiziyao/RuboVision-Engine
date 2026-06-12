@@ -40,6 +40,7 @@ impl LoopSource {
                 bind.task_id.as_str(),
                 bind.function_id.as_str(),
                 bind.device_id.as_str(),
+                0,
             );
 
             info!("LoopSource sending event {:?}", bind);

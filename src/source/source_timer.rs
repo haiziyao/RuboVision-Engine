@@ -38,6 +38,7 @@ impl TimerSource {
                 bind.task_id.as_str(),
                 bind.function_id.as_str(),
                 bind.device_id.as_str(),
+                0,
             );
 
             info!("TimerSource sending event {:?}", bind);

@@ -62,9 +62,10 @@ impl TaskListener {
                             continue;
                         }
                     };
+                    let runtime_param = self.dispatcher.runtime_param(&event);
 
                     tokio::spawn(async move {
-                        match execute(router, device, func).await {
+                        match execute(router, device, func, runtime_param).await {
                             Ok(_) => {
                                 info!("[TaskListener] executed successfully");
                             }

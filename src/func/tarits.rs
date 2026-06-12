@@ -9,7 +9,8 @@ use crate::device::{CameraDevice, Device};
 use crate::message::TaskOutput;
 
 pub type FunctionResult = TaskOutput;
-pub type FunctionRunner = Arc<dyn Fn(&Device) -> Result<FunctionResult> + Send + Sync + 'static>;
+pub type FunctionRunner =
+    Arc<dyn Fn(u8, &Device) -> Result<FunctionResult> + Send + Sync + 'static>;
 
 pub trait FromDevice: Sized {
     fn from_device(device: &Device) -> Result<&Self>;
@@ -79,8 +80,8 @@ impl FunctionWorker {
         }
     }
 
-    pub fn run(&self, device: &Device) -> Result<FunctionResult> {
-        (self.runner)(device)
+    pub fn run(&self, runtime_param: u8, device: &Device) -> Result<FunctionResult> {
+        (self.runner)(runtime_param, device)
     }
 }
 
@@ -114,7 +115,7 @@ pub struct FunctionDescriptor {
 
 pub fn build_typed_function<Params, FunctionDevice>(
     entry: &FunctionEntryConfig,
-    function: fn(&Params, &FunctionDevice) -> Result<FunctionResult>,
+    function: fn(&Params, u8, &FunctionDevice) -> Result<FunctionResult>,
 ) -> Result<FunctionDef>
 where
     Params: DeserializeOwned + ValidateParams + Send + Sync + 'static,
@@ -128,9 +129,9 @@ where
         .validate()
         .with_context(|| format!("invalid values for function `{}`", entry.function_id))?;
     let params = Arc::new(params);
-    let runner: FunctionRunner = Arc::new(move |device| {
+    let runner: FunctionRunner = Arc::new(move |runtime_param, device| {
         let device = FunctionDevice::from_device(device)?;
-        function(params.as_ref(), device)
+        function(params.as_ref(), runtime_param, device)
     });
 
     Ok(FunctionDef::new(

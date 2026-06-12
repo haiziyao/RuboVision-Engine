@@ -24,24 +24,31 @@ impl TaskExecutor {
 pub fn execute_sync(
     device: Device,
     func_worker: FunctionWorker,
+    runtime_param: u8,
 ) -> Result<(TaskOutput, ReturnTargets)> {
     let func_id = func_worker.func_id.clone();
     let returns = func_worker.returns.clone();
     info!("{func_id} is running");
-    let result = func_worker.run(&device)?;
+    let result = func_worker.run(runtime_param, &device)?;
 
     info!("{} has finished execution", func_id);
     Ok((result, returns))
 }
 
-pub async fn execute(router: MessageRouter, device: Device, func: FunctionWorker) -> Result<()> {
+pub async fn execute(
+    router: MessageRouter,
+    device: Device,
+    func: FunctionWorker,
+    runtime_param: u8,
+) -> Result<()> {
     let targets = func.returns.clone();
     let func_id = func.func_id.clone();
     for error in router.task_started(&targets).await {
         warn!("task pre_func message failed: {error:#}");
     }
 
-    let execution = tokio::task::spawn_blocking(move || execute_sync(device, func))
+    let execution =
+        tokio::task::spawn_blocking(move || execute_sync(device, func, runtime_param))
         .await
         .context("blocking task join failed")
         .and_then(|result| result);
@@ -77,6 +84,21 @@ mod tests {
 
     use super::execute;
 
+    #[test]
+    fn function_worker_passes_runtime_param_to_runner() -> Result<()> {
+        let worker = FunctionWorker::new(
+            "test",
+            ReturnTargets::default(),
+            Arc::new(|runtime_param, _device| {
+                Ok(TaskOutput::value("done", runtime_param.to_string()))
+            }),
+        );
+
+        let result = worker.run(7, &Device::None)?;
+        assert_eq!(result.value.as_deref(), Some("7"));
+        Ok(())
+    }
+
     #[tokio::test]
     async fn execute_routes_output_and_gpio_lifecycle() -> Result<()> {
         let (web_tx, mut web_rx) = mpsc::channel(4);
@@ -95,10 +117,12 @@ mod tests {
         let worker = FunctionWorker::new(
             "test",
             returns,
-            Arc::new(|_device| Ok(TaskOutput::value("task finished", "42"))),
+            Arc::new(|_runtime_param, _device| {
+                Ok(TaskOutput::value("task finished", "42"))
+            }),
         );
 
-        execute(router, Device::None, worker).await?;
+        execute(router, Device::None, worker, 0).await?;
 
         assert_eq!(
             gpio_rx.recv().await,
@@ -128,10 +152,12 @@ mod tests {
         let worker = FunctionWorker::new(
             "panic_test",
             returns,
-            Arc::new(|_device: &Device| -> Result<TaskOutput> { panic!("test function panic") }),
+            Arc::new(|_runtime_param, _device: &Device| -> Result<TaskOutput> {
+                panic!("test function panic")
+            }),
         );
 
-        assert!(execute(router, Device::None, worker).await.is_err());
+        assert!(execute(router, Device::None, worker, 0).await.is_err());
         assert_eq!(
             gpio_rx.recv().await,
             Some(GpioOutput::TaskStarted("color".to_string()))

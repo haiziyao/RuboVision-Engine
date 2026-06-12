@@ -4,18 +4,29 @@ use tracing::info;
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub enum Event {
-    UsualEvent(String, String, String),
+    UsualEvent {
+        task_id: String,
+        function_id: String,
+        device_id: String,
+        runtime_param: u8,
+    },
     DebugEvent(String),
     #[allow(dead_code)]
     OtherEvent(String),
 }
 
-pub fn make_event_usual(task_id: &str, func_id: &str, device_id: &str) -> Event {
-    Event::UsualEvent(
-        task_id.to_string(),
-        func_id.to_string(),
-        device_id.to_string(),
-    )
+pub fn make_event_usual(
+    task_id: &str,
+    func_id: &str,
+    device_id: &str,
+    runtime_param: u8,
+) -> Event {
+    Event::UsualEvent {
+        task_id: task_id.to_string(),
+        function_id: func_id.to_string(),
+        device_id: device_id.to_string(),
+        runtime_param,
+    }
 }
 
 pub trait Source {
@@ -43,4 +54,22 @@ pub trait Source {
 #[derive(Default)]
 pub struct BaseSource {
     pub sender: Option<Sender<Event>>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{Event, make_event_usual};
+
+    #[test]
+    fn usual_event_keeps_runtime_param() {
+        assert_eq!(
+            make_event_usual("task", "cross", "camera", 5),
+            Event::UsualEvent {
+                task_id: "task".to_string(),
+                function_id: "cross".to_string(),
+                device_id: "camera".to_string(),
+                runtime_param: 5,
+            }
+        );
+    }
 }
