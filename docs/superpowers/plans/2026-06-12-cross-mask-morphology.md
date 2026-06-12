@@ -20,12 +20,12 @@
 - Modify: `config/functions.toml`
 - Modify: `src/device/vision/tests/cross.rs`
 
-- [ ] **Step 1: Write failing validation tests**
+- [x] **Step 1: Write failing validation tests**
 
 Add registry tests that set `close_kernel_size = 4` and
 `dilate_iterations = 6`, then assert `register_func(functions).is_err()`.
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run:
 
@@ -35,7 +35,7 @@ cargo test register_func_rejects_invalid_cross_morphology -- --nocapture
 
 Expected: FAIL because the new parameters and validation do not exist.
 
-- [ ] **Step 3: Add configuration fields**
+- [x] **Step 3: Add configuration fields**
 
 Add to `CrossDetectParams` and `CrossDetectConfig`:
 
@@ -54,7 +54,7 @@ dilate_kernel_size = 3
 dilate_iterations = 1
 ```
 
-- [ ] **Step 4: Add validation**
+- [x] **Step 4: Add validation**
 
 Validate both kernel sizes with:
 
@@ -66,7 +66,7 @@ fn valid_morphology_kernel(size: i32) -> bool {
 
 Reject `dilate_iterations` outside `0..=5`.
 
-- [ ] **Step 5: Run configuration tests**
+- [x] **Step 5: Run configuration tests**
 
 Run:
 
@@ -83,7 +83,7 @@ Expected: PASS.
 - Modify: `src/device/vision/cross.rs`
 - Modify: `src/device/vision/tests/cross.rs`
 
-- [ ] **Step 1: Write failing mask behavior test**
+- [x] **Step 1: Write failing mask behavior test**
 
 Create a thin broken-ring frame, run `analyze_cross_frame`, and assert:
 
@@ -94,7 +94,7 @@ assert!(core::count_non_zero(&analysis.black_mask)? > raw_foreground);
 
 Also assert the fitted center remains within 8 pixels of the drawn center.
 
-- [ ] **Step 2: Run the test and verify RED**
+- [x] **Step 2: Run the test and verify RED**
 
 Run:
 
@@ -105,7 +105,7 @@ cargo test cross_morphology_reconnects_and_thickens_broken_arcs -- --nocapture
 Expected: FAIL because current opening removes thin foreground or the mask does
 not gain the configured thickness.
 
-- [ ] **Step 3: Implement the mask pipeline**
+- [x] **Step 3: Implement the mask pipeline**
 
 Change `black_mask` to accept `&CrossDetectConfig`. After inverse threshold:
 
@@ -130,7 +130,7 @@ imgproc::morphology_ex(
 If `dilate_iterations > 0`, dilate `closed` with the configured elliptical
 kernel. Otherwise return `closed`.
 
-- [ ] **Step 4: Run Cross tests**
+- [x] **Step 4: Run Cross tests**
 
 Run:
 
@@ -145,7 +145,7 @@ Expected: all Cross tests PASS.
 **Files:**
 - Modify: `docs/superpowers/plans/2026-06-12-cross-mask-morphology.md`
 
-- [ ] **Step 1: Format and compile**
+- [x] **Step 1: Format and compile**
 
 Run:
 
@@ -156,7 +156,7 @@ cargo check
 
 Expected: both exit zero without new warnings.
 
-- [ ] **Step 2: Run full regression**
+- [x] **Step 2: Run full regression**
 
 Run:
 
@@ -166,7 +166,7 @@ cargo test --all-targets
 
 Expected: all non-hardware tests PASS; camera/GUI tests remain ignored.
 
-- [ ] **Step 3: Check the diff**
+- [x] **Step 3: Check the diff**
 
 Run:
 
@@ -178,7 +178,7 @@ git status --short
 Expected: no whitespace errors; the user's `config/device.toml` change remains
 unstaged.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add config/functions.toml src/config/type.rs src/device/vision/config.rs \

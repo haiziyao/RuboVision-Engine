@@ -45,6 +45,9 @@ debug_model = false
 loop_count = 3
 target_correction = { x = 0, y = 0 }
 black_threshold = 90
+close_kernel_size = 5
+dilate_kernel_size = 3
+dilate_iterations = 1
 min_radius = 20.0
 max_radius = 600.0
 center_tolerance = 14.0

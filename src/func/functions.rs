@@ -93,6 +93,19 @@ impl ValidateParams for CrossDetectParams {
         if !(0..=255).contains(&self.black_threshold) {
             return Err(anyhow!("black_threshold must be in [0, 255]"));
         }
+        if !valid_morphology_kernel(self.close_kernel_size) {
+            return Err(anyhow!(
+                "close_kernel_size must be an odd integer in [1, 31]"
+            ));
+        }
+        if !valid_morphology_kernel(self.dilate_kernel_size) {
+            return Err(anyhow!(
+                "dilate_kernel_size must be an odd integer in [1, 31]"
+            ));
+        }
+        if !(0..=5).contains(&self.dilate_iterations) {
+            return Err(anyhow!("dilate_iterations must be in [0, 5]"));
+        }
         if self.min_radius <= 0.0 {
             return Err(anyhow!("min_radius must be greater than 0"));
         }
@@ -149,6 +162,10 @@ impl ValidateParams for CrossDetectParams {
         }
         Ok(())
     }
+}
+
+fn valid_morphology_kernel(size: i32) -> bool {
+    (1..=31).contains(&size) && size % 2 == 1
 }
 
 impl ValidateParams for DebugParams {

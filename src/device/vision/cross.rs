@@ -109,7 +109,7 @@ pub fn analyze_cross_frame(
 ) -> Result<CrossFrameAnalysis> {
     validate_runtime_param(runtime_param, config)?;
     let gray = bgr_to_gray(frame_bgr)?;
-    let black_mask = black_mask(&gray, config.black_threshold)?;
+    let black_mask = black_mask(&gray, config)?;
     let candidates = ring_candidates(&black_mask, config)?;
     let group = best_ring_group(&candidates, config);
     let cylinder = if runtime_param == 0 {
@@ -171,7 +171,7 @@ impl CrossResult {
     }
 }
 
-fn black_mask(gray: &Mat, threshold: i32) -> Result<Mat> {
+fn black_mask(gray: &Mat, config: &CrossDetectConfig) -> Result<Mat> {
     let mut blurred = Mat::default();
     imgproc::gaussian_blur(
         gray,
@@ -186,14 +186,14 @@ fn black_mask(gray: &Mat, threshold: i32) -> Result<Mat> {
     imgproc::threshold(
         &blurred,
         &mut thresholded,
-        threshold as f64,
+        config.black_threshold as f64,
         255.0,
         imgproc::THRESH_BINARY_INV,
     )?;
 
-    let kernel = imgproc::get_structuring_element(
+    let close_kernel = imgproc::get_structuring_element(
         imgproc::MORPH_ELLIPSE,
-        Size::new(3, 3),
+        Size::new(config.close_kernel_size, config.close_kernel_size),
         Point::new(-1, -1),
     )?;
     let mut closed = Mat::default();
@@ -201,24 +201,33 @@ fn black_mask(gray: &Mat, threshold: i32) -> Result<Mat> {
         &thresholded,
         &mut closed,
         imgproc::MORPH_CLOSE,
-        &kernel,
+        &close_kernel,
         Point::new(-1, -1),
         1,
         core::BORDER_CONSTANT,
         Scalar::all(0.0),
     )?;
-    let mut cleaned = Mat::default();
-    imgproc::morphology_ex(
+
+    if config.dilate_iterations == 0 {
+        return Ok(closed);
+    }
+
+    let dilate_kernel = imgproc::get_structuring_element(
+        imgproc::MORPH_ELLIPSE,
+        Size::new(config.dilate_kernel_size, config.dilate_kernel_size),
+        Point::new(-1, -1),
+    )?;
+    let mut thickened = Mat::default();
+    imgproc::dilate(
         &closed,
-        &mut cleaned,
-        imgproc::MORPH_OPEN,
-        &kernel,
+        &mut thickened,
+        &dilate_kernel,
         Point::new(-1, -1),
-        1,
+        config.dilate_iterations,
         core::BORDER_CONSTANT,
         Scalar::all(0.0),
     )?;
-    Ok(cleaned)
+    Ok(thickened)
 }
 
 fn ring_candidates(black_mask: &Mat, config: &CrossDetectConfig) -> Result<Vec<RingCandidate>> {

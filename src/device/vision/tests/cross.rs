@@ -17,6 +17,9 @@ fn base_cross_config() -> CrossDetectConfig {
         loop_count: 1,
         target_correction: TargetCorrection { x: 0, y: 0 },
         black_threshold: 90,
+        close_kernel_size: 5,
+        dilate_kernel_size: 3,
+        dilate_iterations: 1,
         min_radius: 20.0,
         max_radius: 260.0,
         center_tolerance: 14.0,
@@ -83,6 +86,32 @@ fn synthetic_ring_frame(center: Point, radii: &[i32]) -> Result<Mat> {
     Ok(frame)
 }
 
+fn synthetic_broken_thin_ring_frame(center: Point, radii: &[i32]) -> Result<Mat> {
+    let mut frame = Mat::new_rows_cols_with_default(
+        480,
+        640,
+        core::CV_8UC3,
+        Scalar::new(220.0, 220.0, 220.0, 0.0),
+    )?;
+    for &radius in radii {
+        for &(start, end) in &[(5.0, 86.0), (94.0, 176.0), (184.0, 266.0), (274.0, 355.0)] {
+            imgproc::ellipse(
+                &mut frame,
+                center,
+                core::Size::new(radius, radius),
+                0.0,
+                start,
+                end,
+                Scalar::new(0.0, 0.0, 0.0, 0.0),
+                2,
+                imgproc::LINE_AA,
+                0,
+            )?;
+        }
+    }
+    Ok(frame)
+}
+
 #[test]
 fn cross_zero_finds_concentric_ring_center_and_target_offset() -> Result<()> {
     let frame = synthetic_ring_frame(Point::new(350, 220), &[45, 80, 120, 165])?;
@@ -116,6 +145,28 @@ fn cross_zero_uses_visible_arcs_when_center_is_occluded() -> Result<()> {
     let center = result.ring_center.expect("ring center");
     assert!((center.x - 300.0).abs() <= 7.0, "center.x={}", center.x);
     assert!((center.y - 250.0).abs() <= 7.0, "center.y={}", center.y);
+    Ok(())
+}
+
+#[test]
+fn cross_morphology_reconnects_and_thickens_broken_arcs() -> Result<()> {
+    let frame = synthetic_broken_thin_ring_frame(Point::new(330, 230), &[45, 80, 120, 165])?;
+    let mut without_dilation = base_cross_config();
+    without_dilation.dilate_iterations = 0;
+    let without_dilation = analyze_cross_frame(&frame, 0, &without_dilation)?;
+
+    let analysis = analyze_cross_frame(&frame, 0, &base_cross_config())?;
+    let thin_foreground = core::count_non_zero(&without_dilation.black_mask)?;
+    let thick_foreground = core::count_non_zero(&analysis.black_mask)?;
+
+    assert!(
+        thick_foreground > thin_foreground,
+        "thin={thin_foreground}, thick={thick_foreground}"
+    );
+    assert!(analysis.result.valid);
+    let center = analysis.result.ring_center.expect("ring center");
+    assert!((center.x - 330.0).abs() <= 8.0, "center.x={}", center.x);
+    assert!((center.y - 230.0).abs() <= 8.0, "center.y={}", center.y);
     Ok(())
 }
 

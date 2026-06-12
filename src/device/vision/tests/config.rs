@@ -44,6 +44,9 @@ fn cross_detect_config_from_config_file() -> Result<()> {
     assert_eq!(config.path, configured_device_path("cross_camera")?);
     assert_eq!(config.target_correction.x, 0);
     assert_eq!(config.target_correction.y, 0);
+    assert_eq!(config.close_kernel_size, 5);
+    assert_eq!(config.dilate_kernel_size, 3);
+    assert_eq!(config.dilate_iterations, 1);
     assert_eq!(
         config
             .colors

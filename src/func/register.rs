@@ -130,4 +130,55 @@ mod tests {
 
         assert!(register_func(functions).is_err());
     }
+
+    #[test]
+    fn register_func_rejects_invalid_cross_morphology_kernel() {
+        let mut functions = load_config().expect("load config").functions;
+        let cross = functions
+            .entries
+            .iter_mut()
+            .find(|entry| entry.function_id == "cross")
+            .expect("cross config");
+        cross
+            .params
+            .as_table_mut()
+            .expect("cross params table")
+            .insert("close_kernel_size".to_string(), toml::Value::Integer(4));
+
+        assert!(register_func(functions).is_err());
+    }
+
+    #[test]
+    fn register_func_rejects_invalid_cross_dilate_kernel() {
+        let mut functions = load_config().expect("load config").functions;
+        let cross = functions
+            .entries
+            .iter_mut()
+            .find(|entry| entry.function_id == "cross")
+            .expect("cross config");
+        cross
+            .params
+            .as_table_mut()
+            .expect("cross params table")
+            .insert("dilate_kernel_size".to_string(), toml::Value::Integer(2));
+
+        assert!(register_func(functions).is_err());
+    }
+
+    #[test]
+    fn register_func_rejects_invalid_cross_morphology_iterations() {
+        let mut functions = load_config().expect("load config").functions;
+        let cross = functions
+            .entries
+            .iter_mut()
+            .find(|entry| entry.function_id == "cross")
+            .expect("cross config");
+        cross
+            .params
+            .as_table_mut()
+            .expect("cross params table")
+            .insert("dilate_iterations".to_string(), toml::Value::Integer(6));
+
+        assert!(register_func(functions).is_err());
+    }
 }
