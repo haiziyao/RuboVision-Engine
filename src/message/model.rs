@@ -16,6 +16,7 @@ impl TaskOutput {
         }
     }
 
+    #[cfg_attr(not(test), allow(dead_code))]
     pub fn value(text: impl Into<String>, value: impl Into<String>) -> Self {
         Self {
             code: 200,

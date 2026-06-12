@@ -22,4 +22,4 @@ pub use config::{CrossColor, TargetCorrection};
 pub use cross::{CrossDetectOutput, format_cross_value, run_cross_detect_with_frame};
 #[cfg(test)]
 pub use cross::{CrossResult, analyze_cross_frame};
-pub use qr::run_qr_detect;
+pub use qr::{QrDetectOutput, run_qr_detect_with_frame};

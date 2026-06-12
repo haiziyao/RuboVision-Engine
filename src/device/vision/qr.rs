@@ -6,7 +6,12 @@ use crate::utils::cv_util::bgr_to_gray;
 use super::camera::register_qr_camera;
 use super::config::QrDetectConfig;
 
-pub fn run_qr_detect(config: &QrDetectConfig) -> Result<i32> {
+pub struct QrDetectOutput {
+    pub value: i32,
+    pub frame: core::Mat,
+}
+
+pub fn run_qr_detect_with_frame(config: &QrDetectConfig) -> Result<QrDetectOutput> {
     let mut cam = register_qr_camera(config)?;
 
     loop {
@@ -24,21 +29,20 @@ pub fn run_qr_detect(config: &QrDetectConfig) -> Result<i32> {
         };
 
         if !content.is_empty() {
-            return content
+            let value = content
                 .parse::<i32>()
-                .with_context(|| format!("qr payload is not an integer: {content}"));
+                .with_context(|| format!("qr payload is not an integer: {content}"))?;
+            return Ok(QrDetectOutput { value, frame });
         }
 
         if config.debug_model {
             highgui::imshow("qr_detect", &processed_frame)?;
             let key = highgui::wait_key(1)?;
             if key == 27 {
-                break;
+                return Ok(QrDetectOutput { value: -1, frame });
             }
         }
     }
-
-    Ok(-1)
 }
 
 fn decode_qr(processed_frame: &core::Mat) -> Result<String> {

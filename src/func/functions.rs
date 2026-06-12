@@ -10,9 +10,9 @@ use crate::config::{
 };
 use crate::device::{
     BlackRingDetectConfig, BlackRingDetectOutput, CameraDevice, ColorDetectConfig,
-    ColorDetectOutput, CrossDetectConfig, CrossDetectOutput, QrDetectConfig,
+    ColorDetectOutput, CrossDetectConfig, CrossDetectOutput, QrDetectConfig, QrDetectOutput,
     format_black_ring_value, format_cross_value, run_black_ring_detect_with_frame,
-    run_color_detect_with_frame, run_cross_detect_with_frame, run_qr_detect,
+    run_color_detect_with_frame, run_cross_detect_with_frame, run_qr_detect_with_frame,
 };
 use crate::func::{FunctionResult, NoDevice, ValidateParams, declare_functions};
 use crate::utils::web_tools::mat_to_jpeg_data_url;
@@ -185,10 +185,16 @@ fn qr_detect(
     camera: &CameraDevice,
 ) -> Result<FunctionResult> {
     let config = QrDetectConfig::from_params(params, camera);
-    let value = run_qr_detect(&config)?;
-    Ok(FunctionResult::value(
-        format!("qr_detect finished: {value}"),
-        value.to_string(),
+    let output = run_qr_detect_with_frame(&config)?;
+    qr_detect_output_to_function_result(output)
+}
+
+fn qr_detect_output_to_function_result(output: QrDetectOutput) -> Result<FunctionResult> {
+    let image = mat_to_jpeg_data_url(&output.frame)?;
+    Ok(FunctionResult::value_with_image(
+        format!("qr_detect finished: {}", output.value),
+        output.value.to_string(),
+        image,
     ))
 }
 
@@ -276,6 +282,27 @@ mod tests {
 
         assert_eq!(result.text, "color_detect finished: red");
         assert_eq!(result.value.as_deref(), Some("red"));
+        assert!(
+            result
+                .image
+                .as_deref()
+                .is_some_and(|image| image.starts_with("data:image/jpeg;base64,"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn qr_detect_output_to_function_result_keeps_value_and_image() -> Result<()> {
+        let frame = Mat::new_rows_cols_with_default(
+            8,
+            8,
+            core::CV_8UC3,
+            core::Scalar::new(255.0, 255.0, 255.0, 0.0),
+        )?;
+        let result = qr_detect_output_to_function_result(QrDetectOutput { value: 42, frame })?;
+
+        assert_eq!(result.text, "qr_detect finished: 42");
+        assert_eq!(result.value.as_deref(), Some("42"));
         assert!(
             result
                 .image
