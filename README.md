@@ -133,24 +133,26 @@ pub struct TaskOutput {
 
 ## UART 协议
 
-输入帧固定为三个字节：
+输入帧固定为四个字节：
 
 ```text
-[0xAA, CMD, 0x55]
+[0xAA, CMD, PARAM, 0x55]
 ```
+
+`PARAM` 是单次任务的运行时参数；不需要参数的命令发送 `0x00`。
 
 | 命令 | 发送字节 | 行为 |
 | --- | --- | --- |
-| 颜色识别 | `AA 01 55` | 分发 `color_detect` binding |
-| 二维码识别 | `AA 02 55` | 分发 `qr_detect` binding |
-| 十字/路口识别 | `AA 03 55` | 分发 `cross_detect` binding |
-| 停止任务 | `AA 04 55` | 预留，只记录日志 |
-| 状态/心跳 | `AA 05 55` | 预留，只记录日志 |
+| 颜色识别 | `AA 01 00 55` | 分发 `color_detect` binding |
+| 二维码识别 | `AA 02 00 55` | 分发 `qr_detect` binding |
+| Cross 识别 | `AA 03 PARAM 55` | 分发 `cross_detect` binding并传入参数 |
+| 停止任务 | `AA 04 00 55` | 预留，只记录日志 |
+| 状态/心跳 | `AA 05 00 55` | 预留，只记录日志 |
 
 UART 是字节流。`UartSource` 使用 `Vec<u8>` 保存 pending 数据：
 
 - HEAD 前的垃圾字节会被丢弃。
-- 不足三个字节的数据会保留到下一次读取。
+- 不足四个字节的数据会保留到下一次读取。
 - TAIL 错误时丢弃一个字节并重新同步。
 - 多帧会连续解析。
 - pending 超过 64 字节会记录警告并清空。

@@ -72,7 +72,10 @@ pub async fn debug_trigger(
             .into_response();
     };
 
-    match source.trigger(request.source_key.trim()).await {
+    match source
+        .trigger(request.source_key.trim(), request.runtime_param)
+        .await
+    {
         Ok(Event::UsualEvent { task_id, .. }) => (
             StatusCode::ACCEPTED,
             Json(DebugTriggerResponse {
@@ -157,6 +160,7 @@ mod tests {
             State(state.clone()),
             Json(DebugTriggerRequest {
                 source_key: "color".to_string(),
+                runtime_param: 4,
             }),
         )
         .await
@@ -172,7 +176,7 @@ mod tests {
         assert!(matches!(
             rx.recv().await,
             Some(Event::UsualEvent {
-                runtime_param: 0,
+                runtime_param: 4,
                 ..
             })
         ));
@@ -181,6 +185,7 @@ mod tests {
             State(state),
             Json(DebugTriggerRequest {
                 source_key: "missing".to_string(),
+                runtime_param: 0,
             }),
         )
         .await
@@ -195,10 +200,19 @@ mod tests {
             State(closed_state),
             Json(DebugTriggerRequest {
                 source_key: "color".to_string(),
+                runtime_param: 0,
             }),
         )
         .await
         .into_response();
         assert_eq!(unavailable.status(), StatusCode::SERVICE_UNAVAILABLE);
+    }
+
+    #[test]
+    fn debug_trigger_request_defaults_runtime_param_to_zero() {
+        let request: DebugTriggerRequest =
+            serde_json::from_str(r#"{"source_key":"cross"}"#).expect("valid request");
+
+        assert_eq!(request.runtime_param, 0);
     }
 }

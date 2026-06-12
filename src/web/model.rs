@@ -11,6 +11,8 @@ pub struct DebugBindingView {
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct DebugTriggerRequest {
     pub source_key: String,
+    #[serde(default)]
+    pub runtime_param: u8,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, serde::Serialize, serde::Deserialize)]

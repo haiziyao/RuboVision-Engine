@@ -33,7 +33,11 @@ impl DebugSource {
         bindings
     }
 
-    pub async fn trigger(&self, source_key: &str) -> Result<Event, DebugSourceError> {
+    pub async fn trigger(
+        &self,
+        source_key: &str,
+        runtime_param: u8,
+    ) -> Result<Event, DebugSourceError> {
         let binding = self
             .bindings
             .get(source_key)
@@ -42,7 +46,7 @@ impl DebugSource {
             &binding.task_id,
             &binding.function_id,
             &binding.device_id,
-            0,
+            runtime_param,
         );
         self.sender
             .send(event.clone())
@@ -92,7 +96,10 @@ mod tests {
         let (tx, mut rx) = mpsc::channel(1);
         let source = DebugSource::new(vec![binding("color")], tx);
 
-        let event = source.trigger("color").await.expect("trigger accepted");
+        let event = source
+            .trigger("color", 0)
+            .await
+            .expect("trigger accepted");
 
         assert_eq!(
             event,
@@ -112,7 +119,7 @@ mod tests {
         let source = DebugSource::new(vec![binding("color")], tx);
 
         let error = source
-            .trigger("missing")
+            .trigger("missing", 0)
             .await
             .expect_err("unknown key must fail");
 

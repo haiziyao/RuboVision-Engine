@@ -9,7 +9,7 @@ use tracing::{debug, info};
 
 const UART_FRAME_HEAD: u8 = 0xAA;
 const UART_FRAME_TAIL: u8 = 0x55;
-const UART_FRAME_LEN: usize = 3;
+const UART_FRAME_LEN: usize = 4;
 const UART_PENDING_MAX_LEN: usize = 64;
 const UART_COMMAND_STOP_RESERVED: u8 = 0x04;
 const UART_COMMAND_STATUS_RESERVED: u8 = 0x05;
@@ -19,6 +19,12 @@ enum UartCommandKind {
     Task(u8),
     ReservedStop,
     ReservedStatus,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+struct UartFrame {
+    command: u8,
+    param: u8,
 }
 
 #[derive(Default)]
@@ -75,25 +81,24 @@ impl UartSource {
 
         while let Some(bytes) = incoming.recv().await {
             pending.extend_from_slice(&bytes);
-            self.dispatch_pending_commands(&mut pending, &binding_map)
-                .await;
+            self.dispatch_pending_frames(&mut pending, &binding_map).await;
         }
 
         Err(anyhow!("UART transport input channel closed"))
     }
 
-    async fn dispatch_pending_commands(
+    async fn dispatch_pending_frames(
         &self,
         pending: &mut Vec<u8>,
         binding_map: &HashMap<u8, UartBinding>,
     ) {
-        for command in take_uart_commands(pending) {
-            self.dispatch_command(command, binding_map).await;
+        for frame in take_uart_frames(pending) {
+            self.dispatch_frame(frame, binding_map).await;
         }
     }
 
-    async fn dispatch_command(&self, command: u8, binding_map: &HashMap<u8, UartBinding>) {
-        match classify_uart_command(command) {
+    async fn dispatch_frame(&self, frame: UartFrame, binding_map: &HashMap<u8, UartBinding>) {
+        match classify_uart_command(frame.command) {
             UartCommandKind::ReservedStop => {
                 info!("UartSource received reserved stop command 0x04");
                 return;
@@ -105,8 +110,11 @@ impl UartSource {
             UartCommandKind::Task(_) => {}
         }
 
-        let Some(bind) = binding_map.get(&command) else {
-            warn!("UartSource ignored unknown command 0x{command:02X}");
+        let Some(bind) = binding_map.get(&frame.command) else {
+            warn!(
+                "UartSource ignored unknown command 0x{:02X}",
+                frame.command
+            );
             return;
         };
 
@@ -114,12 +122,12 @@ impl UartSource {
             bind.task_id.as_str(),
             bind.function_id.as_str(),
             bind.device_id.as_str(),
-            0,
+            frame.param,
         );
 
         info!(
-            "UartSource dispatching command 0x{command:02X} as {:?}",
-            bind
+            "UartSource dispatching command 0x{:02X} param 0x{:02X} as {:?}",
+            frame.command, frame.param, bind
         );
 
         match self.send(event).await {
@@ -137,7 +145,7 @@ fn classify_uart_command(command: u8) -> UartCommandKind {
     }
 }
 
-fn take_uart_commands(pending: &mut Vec<u8>) -> Vec<u8> {
+fn take_uart_frames(pending: &mut Vec<u8>) -> Vec<UartFrame> {
     if pending.len() > UART_PENDING_MAX_LEN {
         warn!(
             "UartSource pending frame buffer too long ({} bytes), clearing it",
@@ -147,7 +155,7 @@ fn take_uart_commands(pending: &mut Vec<u8>) -> Vec<u8> {
         return Vec::new();
     }
 
-    let mut commands = Vec::new();
+    let mut frames = Vec::new();
     loop {
         let Some(head_pos) = pending.iter().position(|&byte| byte == UART_FRAME_HEAD) else {
             if !pending.is_empty() {
@@ -172,7 +180,7 @@ fn take_uart_commands(pending: &mut Vec<u8>) -> Vec<u8> {
             break;
         }
 
-        if pending[2] != UART_FRAME_TAIL {
+        if pending[3] != UART_FRAME_TAIL {
             warn!(
                 "UartSource invalid frame tail, dropping one byte: {:?}",
                 &pending[..UART_FRAME_LEN]
@@ -181,18 +189,21 @@ fn take_uart_commands(pending: &mut Vec<u8>) -> Vec<u8> {
             continue;
         }
 
-        commands.push(pending[1]);
+        frames.push(UartFrame {
+            command: pending[1],
+            param: pending[2],
+        });
         pending.drain(..UART_FRAME_LEN);
     }
 
-    commands
+    frames
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        UART_PENDING_MAX_LEN, UartCommandKind, UartSource, classify_uart_command,
-        take_uart_commands,
+        UART_PENDING_MAX_LEN, UartCommandKind, UartFrame, UartSource, classify_uart_command,
+        take_uart_frames,
     };
     use crate::config::UartConfig;
     use crate::config::binding::UartBinding;
@@ -329,37 +340,71 @@ mod tests {
 
     #[test]
     fn uart_frame_parser_preserves_partial_frame() {
-        let mut pending = vec![0xAA, 0x01];
+        let mut pending = vec![0xAA, 0x01, 0x05];
 
-        assert!(take_uart_commands(&mut pending).is_empty());
-        assert_eq!(pending, vec![0xAA, 0x01]);
+        assert!(take_uart_frames(&mut pending).is_empty());
+        assert_eq!(pending, vec![0xAA, 0x01, 0x05]);
 
         pending.push(0x55);
-        assert_eq!(take_uart_commands(&mut pending), vec![0x01]);
+        assert_eq!(
+            take_uart_frames(&mut pending),
+            vec![UartFrame {
+                command: 0x01,
+                param: 0x05,
+            }]
+        );
         assert!(pending.is_empty());
     }
 
     #[test]
     fn uart_frame_parser_handles_multiple_frames() {
-        let mut pending = vec![0xAA, 0x01, 0x55, 0xAA, 0x02, 0x55];
+        let mut pending = vec![0xAA, 0x01, 0x02, 0x55, 0xAA, 0x02, 0x03, 0x55];
 
-        assert_eq!(take_uart_commands(&mut pending), vec![0x01, 0x02]);
+        assert_eq!(
+            take_uart_frames(&mut pending),
+            vec![
+                UartFrame {
+                    command: 0x01,
+                    param: 0x02,
+                },
+                UartFrame {
+                    command: 0x02,
+                    param: 0x03,
+                },
+            ]
+        );
         assert!(pending.is_empty());
     }
 
     #[test]
     fn uart_frame_parser_drops_noise_and_recovers_from_bad_tail() {
-        let mut pending = vec![0x00, 0x99, 0xAA, 0x01, 0x00, 0xAA, 0x03, 0x55];
+        let mut pending = vec![
+            0x00, 0x99, 0xAA, 0x01, 0x02, 0x00, 0xAA, 0x03, 0x04, 0x55,
+        ];
 
-        assert_eq!(take_uart_commands(&mut pending), vec![0x03]);
+        assert_eq!(
+            take_uart_frames(&mut pending),
+            vec![UartFrame {
+                command: 0x03,
+                param: 0x04,
+            }]
+        );
         assert!(pending.is_empty());
+    }
+
+    #[test]
+    fn old_three_byte_frame_does_not_dispatch() {
+        let mut pending = vec![0xAA, 0x03, 0x55];
+
+        assert!(take_uart_frames(&mut pending).is_empty());
+        assert_eq!(pending, vec![0xAA, 0x03, 0x55]);
     }
 
     #[test]
     fn uart_frame_parser_clears_oversized_pending_data() {
         let mut pending = vec![0xAA; UART_PENDING_MAX_LEN + 1];
 
-        assert!(take_uart_commands(&mut pending).is_empty());
+        assert!(take_uart_frames(&mut pending).is_empty());
         assert!(pending.is_empty());
     }
 
@@ -393,7 +438,7 @@ mod tests {
         tokio::time::sleep(Duration::from_millis(100)).await;
 
         let mut peer = pair.open_peer_write()?;
-        peer.write_all(&[0xAA, 0x01, 0x55])?;
+        peer.write_all(&[0xAA, 0x01, 0x05, 0x55])?;
         peer.flush()?;
 
         let event = tokio::time::timeout(Duration::from_secs(2), rx.recv())
@@ -406,7 +451,7 @@ mod tests {
                 task_id: "uart_test_task".to_string(),
                 function_id: "color_detect".to_string(),
                 device_id: "uart_test_camera".to_string(),
-                runtime_param: 0,
+                runtime_param: 5,
             }
         );
 
