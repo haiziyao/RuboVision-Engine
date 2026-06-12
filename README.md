@@ -296,6 +296,22 @@ cargo run
 
 测试中标记为 `ignored` 的项目包括真实摄像头、GUI、长驻 Web 服务和完整运行时。
 
+Cross 摄像头调试窗口会同时显示原图、灰度图、黑环掩膜、原始颜色掩膜和最终标注。
+启动参数可通过环境变量设置，运行中按数字键 `0` 到 `5` 切换模式，按 `q` 或
+`Esc` 退出：
+
+```bash
+RUBO_TEST_CROSS_CAMERA=/dev/video2 RUBO_TEST_CROSS_PARAM=0 \
+  cargo test show_cross_detect_cv_steps_from_config -- --ignored --nocapture
+```
+
+把结果和标注图发送到 Web 时也使用同一参数：
+
+```bash
+RUBO_TEST_CROSS_PARAM=1 \
+  cargo test cross_detect_result_to_web_with_base64 -- --ignored --nocapture
+```
+
 ## 已知保留项
 
 - UART `0x04` 和 `0x05` 只作为协议标识保留。

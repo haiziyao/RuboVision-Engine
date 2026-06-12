@@ -73,6 +73,24 @@ pub(super) fn cross_detect_config_from_config() -> Result<CrossDetectConfig> {
     Ok(CrossDetectConfig::from_params(&params, &camera))
 }
 
+pub(super) fn parse_cross_runtime_param(value: &str) -> Result<u8> {
+    let param = value
+        .parse::<u8>()
+        .with_context(|| format!("invalid cross runtime param: {value}"))?;
+    if param > 5 {
+        return Err(anyhow!("cross runtime param must be in 0..=5"));
+    }
+    Ok(param)
+}
+
+pub(super) fn cross_runtime_param_from_env() -> Result<u8> {
+    match env::var("RUBO_TEST_CROSS_PARAM") {
+        Ok(value) => parse_cross_runtime_param(&value),
+        Err(env::VarError::NotPresent) => Ok(0),
+        Err(error) => Err(error).context("RUBO_TEST_CROSS_PARAM is not valid Unicode"),
+    }
+}
+
 pub(super) fn configured_device_path(device_id: &str) -> Result<String> {
     let cfg = load_config().context("failed to load runtime config")?;
     Ok(camera_from_config(&cfg, device_id)?.path)

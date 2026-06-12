@@ -15,8 +15,9 @@ use super::super::color::analyze_color_frame;
 use super::super::{ColorDetectConfig, QrDetectConfig};
 use super::super::{format_cross_value, run_cross_detect_with_frame};
 use super::support::{
-    color_detect_config_from_config, cross_detect_config_from_config, draw_label, open_camera,
-    qr_detect_config_from_config, read_non_empty_frame, web_config_from_config,
+    color_detect_config_from_config, cross_detect_config_from_config, cross_runtime_param_from_env,
+    draw_label, open_camera, qr_detect_config_from_config, read_non_empty_frame,
+    web_config_from_config,
 };
 
 #[tokio::test(flavor = "multi_thread")]
@@ -68,10 +69,11 @@ fn qr_detect_result_to_web_with_base64() -> Result<()> {
 #[ignore = "requires cross camera and GUI; loops forever and auto-starts web if needed"]
 fn cross_detect_result_to_web_with_base64() -> Result<()> {
     let config = cross_detect_config_from_config()?;
+    let runtime_param = cross_runtime_param_from_env()?;
     highgui::named_window("cross_detect_web", highgui::WINDOW_NORMAL)?;
 
     loop {
-        let output = run_cross_detect_with_frame(0, &config)?;
+        let output = run_cross_detect_with_frame(runtime_param, &config)?;
         let result = format_cross_value(&output.result);
         highgui::imshow("cross_detect_web", &output.frame)?;
         highgui::wait_key(1)?;

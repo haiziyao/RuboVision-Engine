@@ -2,7 +2,8 @@ use anyhow::Result;
 
 use super::support::{
     black_ring_detect_config_from_config, color_detect_config_from_config, configured_color_names,
-    configured_device_path, cross_detect_config_from_config, qr_detect_config_from_config,
+    configured_device_path, cross_detect_config_from_config, parse_cross_runtime_param,
+    qr_detect_config_from_config,
 };
 
 #[test]
@@ -51,5 +52,14 @@ fn cross_detect_config_from_config_file() -> Result<()> {
             .collect::<Vec<_>>(),
         vec![1, 2, 3, 4, 5]
     );
+    Ok(())
+}
+
+#[test]
+fn cross_runtime_param_accepts_only_zero_through_five() -> Result<()> {
+    assert_eq!(parse_cross_runtime_param("0")?, 0);
+    assert_eq!(parse_cross_runtime_param("5")?, 5);
+    assert!(parse_cross_runtime_param("6").is_err());
+    assert!(parse_cross_runtime_param("red").is_err());
     Ok(())
 }

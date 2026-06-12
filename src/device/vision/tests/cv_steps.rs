@@ -1,11 +1,15 @@
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use opencv::{core, highgui, prelude::*};
 
-use crate::utils::cv_util::{hsv_inrange, roi_circle_mask};
+use crate::utils::cv_util::{hsv_inrange, hsv_scalar_factory, roi_circle_mask};
 
-use super::super::{analyze_black_ring_frame, color::analyze_color_frame};
+use super::super::{
+    CrossDetectConfig, analyze_black_ring_frame, analyze_cross_frame, color::analyze_color_frame,
+    format_cross_value,
+};
 use super::support::{
-    black_ring_detect_config_from_config, color_detect_config_from_config, draw_label, open_camera,
+    black_ring_detect_config_from_config, color_detect_config_from_config,
+    cross_detect_config_from_config, cross_runtime_param_from_env, draw_label, open_camera,
     read_non_empty_frame,
 };
 
@@ -181,6 +185,93 @@ fn find_black_ring_target_correction_from_config() -> Result<()> {
     }
 
     Ok(())
+}
+
+#[test]
+#[ignore = "requires cross camera and GUI; keys 0-5 switch mode, q/ESC exits"]
+fn show_cross_detect_cv_steps_from_config() -> Result<()> {
+    let config = cross_detect_config_from_config()?;
+    let mut runtime_param = cross_runtime_param_from_env()?;
+    let mut cam = open_camera(&config.path)?;
+
+    highgui::named_window("cross/frame", highgui::WINDOW_NORMAL)?;
+    highgui::named_window("cross/gray", highgui::WINDOW_NORMAL)?;
+    highgui::named_window("cross/black_mask", highgui::WINDOW_NORMAL)?;
+    highgui::named_window("cross/raw_color_mask", highgui::WINDOW_NORMAL)?;
+    highgui::named_window("cross/annotated", highgui::WINDOW_NORMAL)?;
+
+    println!(
+        "cross debug camera={} initial_param={runtime_param}; press 0-5 to switch, q/ESC to exit",
+        config.path
+    );
+
+    loop {
+        let frame = read_non_empty_frame(&mut cam)?;
+        let raw_color_mask = cross_raw_color_mask(&frame, runtime_param, &config)?;
+        let mut analysis = analyze_cross_frame(&frame, runtime_param, &config)?;
+        let value = format_cross_value(&analysis.result);
+        let mode = cross_mode_name(runtime_param, &config);
+        draw_label(
+            &mut analysis.annotated,
+            &format!("mode={runtime_param}:{mode} {value}"),
+            10,
+            60,
+        )?;
+        draw_label(
+            &mut analysis.annotated,
+            "keys 0-5 switch; q/ESC exits",
+            10,
+            90,
+        )?;
+
+        highgui::imshow("cross/frame", &frame)?;
+        highgui::imshow("cross/gray", &analysis.gray)?;
+        highgui::imshow("cross/black_mask", &analysis.black_mask)?;
+        highgui::imshow("cross/raw_color_mask", &raw_color_mask)?;
+        highgui::imshow("cross/annotated", &analysis.annotated)?;
+
+        let key = highgui::wait_key(1)? & 0xff;
+        if key == 113 || key == 27 {
+            println!("last cross result: {value}");
+            break;
+        }
+        if (48..=53).contains(&key) {
+            runtime_param = (key - 48) as u8;
+            println!(
+                "switched to cross_{runtime_param} ({})",
+                cross_mode_name(runtime_param, &config)
+            );
+        }
+    }
+
+    Ok(())
+}
+
+fn cross_raw_color_mask(frame: &Mat, runtime_param: u8, config: &CrossDetectConfig) -> Result<Mat> {
+    if runtime_param == 0 {
+        return Ok(Mat::zeros(frame.rows(), frame.cols(), core::CV_8UC1)?.to_mat()?);
+    }
+
+    let color = config
+        .colors
+        .iter()
+        .find(|color| color.id == runtime_param)
+        .ok_or_else(|| anyhow!("cross color id {runtime_param} is not configured"))?;
+    let (lower, upper) = hsv_scalar_factory(color.hsv)?;
+    hsv_inrange(frame, &lower, &upper)
+}
+
+fn cross_mode_name(runtime_param: u8, config: &CrossDetectConfig) -> &str {
+    if runtime_param == 0 {
+        return "ring_center";
+    }
+
+    config
+        .colors
+        .iter()
+        .find(|color| color.id == runtime_param)
+        .map(|color| color.name.as_str())
+        .unwrap_or("unknown")
 }
 
 fn ordered_pair(a: i32, b: i32) -> (i32, i32) {
