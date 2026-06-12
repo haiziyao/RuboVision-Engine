@@ -12,7 +12,7 @@ use crate::utils::cv_util::bgr_to_gray;
 use crate::web::WebMessage;
 
 use super::super::color::analyze_color_frame;
-use super::super::run_cross_detect;
+use super::super::{format_cross_value, run_cross_detect_with_frame};
 use super::super::{ColorDetectConfig, QrDetectConfig};
 use super::support::{
     color_detect_config_from_config, cross_detect_config_from_config, draw_label, open_camera,
@@ -71,19 +71,12 @@ fn cross_detect_result_to_web_with_base64() -> Result<()> {
     highgui::named_window("cross_detect_web", highgui::WINDOW_NORMAL)?;
 
     loop {
-        let result = run_cross_detect(&config)?;
-        let mut cam = open_camera(&config.path)?;
-        let mut frame = read_non_empty_frame(&mut cam)?;
-        draw_label(
-            &mut frame,
-            &format!("cross_detect result: {result}"),
-            10,
-            30,
-        )?;
-        highgui::imshow("cross_detect_web", &frame)?;
+        let output = run_cross_detect_with_frame(0, &config)?;
+        let result = format_cross_value(&output.result);
+        highgui::imshow("cross_detect_web", &output.frame)?;
         highgui::wait_key(1)?;
 
-        send_vision_result_to_web(format!("cross_detect result: {result}"), &frame)?;
+        send_vision_result_to_web(format!("cross result: {result}"), &output.frame)?;
         if !sleep_after_success()? {
             break;
         }

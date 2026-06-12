@@ -7,7 +7,7 @@ use opencv::{
 
 use super::super::{
     CrossColor, CrossDetectConfig, CrossResult, TargetCorrection, analyze_cross_frame,
-    format_cross_value,
+    format_cross_value, run_cross_detect_with_frame,
 };
 
 fn base_cross_config() -> CrossDetectConfig {
@@ -264,4 +264,13 @@ fn cross_five_separates_white_cylinder_from_gray_background() -> Result<()> {
     assert!((center.x - 285.0).abs() <= 3.0, "center.x={}", center.x);
     assert!((center.y - 275.0).abs() <= 3.0, "center.y={}", center.y);
     Ok(())
+}
+
+#[test]
+fn cross_rejects_invalid_runtime_param_before_opening_camera() {
+    let error = run_cross_detect_with_frame(6, &base_cross_config())
+        .err()
+        .expect("invalid runtime param");
+
+    assert!(error.to_string().contains("runtime_param"));
 }

@@ -1,6 +1,8 @@
 use anyhow::Result;
 
-use super::super::{run_color_detect_with_frame, run_cross_detect, run_qr_detect};
+use super::super::{
+    format_cross_value, run_color_detect_with_frame, run_cross_detect_with_frame, run_qr_detect,
+};
 use super::support::{
     color_detect_config_from_config, cross_detect_config_from_config, qr_detect_config_from_config,
 };
@@ -26,10 +28,12 @@ fn qr_detect_function_from_config() -> Result<()> {
 }
 
 #[test]
+#[ignore = "requires cross camera and GUI; reads only config and runs cross"]
 fn cross_detect_function_from_config() -> Result<()> {
     let config = cross_detect_config_from_config()?;
-    let result = run_cross_detect(&config)?;
+    let output = run_cross_detect_with_frame(0, &config)?;
+    let result = format_cross_value(&output.result);
 
-    println!("cross_detect result: {result}");
+    println!("cross result: {result}");
     Ok(())
 }

@@ -1,17 +1,16 @@
-#![allow(dead_code)]
-
 use std::f64::consts::{PI, TAU};
 
 use anyhow::{Result, anyhow};
 use opencv::{
     core::{self, Mat, Point, Point2f, Scalar, Size},
-    imgproc,
+    highgui, imgproc,
     prelude::*,
     types,
 };
 
 use crate::utils::cv_util::{bgr_to_gray, hsv_inrange, hsv_scalar_factory};
 
+use super::camera::register_cross_camera;
 use super::config::{CrossColor, CrossDetectConfig};
 
 #[derive(Debug, Clone)]
@@ -31,6 +30,11 @@ pub struct CrossFrameAnalysis {
     pub gray: Mat,
     pub black_mask: Mat,
     pub annotated: Mat,
+}
+
+pub struct CrossDetectOutput {
+    pub result: CrossResult,
+    pub frame: Mat,
 }
 
 #[derive(Debug, Clone)]
@@ -55,9 +59,47 @@ struct CylinderCandidate {
     score: u8,
 }
 
-pub fn run_cross_detect(config: &CrossDetectConfig) -> Result<String> {
-    let _path = &config.path;
-    Ok("0".to_string())
+pub fn run_cross_detect_with_frame(
+    runtime_param: u8,
+    config: &CrossDetectConfig,
+) -> Result<CrossDetectOutput> {
+    validate_runtime_param(runtime_param, config)?;
+    let mut cam = register_cross_camera(config)?;
+    let mut best: Option<CrossDetectOutput> = None;
+    let mut last_frame = Mat::default();
+
+    for _ in 0..config.loop_count.max(1) {
+        let mut frame = Mat::default();
+        cam.read(&mut frame)?;
+        if frame.empty() {
+            continue;
+        }
+        last_frame = frame.clone();
+        let analysis = analyze_cross_frame(&frame, runtime_param, config)?;
+
+        if config.debug_model {
+            highgui::imshow("cross/annotated", &analysis.annotated)?;
+            let key = highgui::wait_key(1)?;
+            if key == 113 || key == 27 {
+                break;
+            }
+        }
+
+        if best
+            .as_ref()
+            .is_none_or(|current| analysis.result.score >= current.result.score)
+        {
+            best = Some(CrossDetectOutput {
+                result: analysis.result,
+                frame: analysis.annotated,
+            });
+        }
+    }
+
+    Ok(best.unwrap_or_else(|| CrossDetectOutput {
+        result: CrossResult::invalid(runtime_param),
+        frame: last_frame,
+    }))
 }
 
 pub fn analyze_cross_frame(
@@ -65,9 +107,7 @@ pub fn analyze_cross_frame(
     runtime_param: u8,
     config: &CrossDetectConfig,
 ) -> Result<CrossFrameAnalysis> {
-    if runtime_param > 5 {
-        return Err(anyhow!("cross runtime_param must be in 0..=5"));
-    }
+    validate_runtime_param(runtime_param, config)?;
     let gray = bgr_to_gray(frame_bgr)?;
     let black_mask = black_mask(&gray, config.black_threshold)?;
     let candidates = ring_candidates(&black_mask, config)?;
@@ -100,6 +140,23 @@ pub fn analyze_cross_frame(
         black_mask,
         annotated,
     })
+}
+
+fn validate_runtime_param(runtime_param: u8, config: &CrossDetectConfig) -> Result<()> {
+    if runtime_param > 5 {
+        return Err(anyhow!("cross runtime_param must be in 0..=5"));
+    }
+    if runtime_param > 0
+        && !config
+            .colors
+            .iter()
+            .any(|color| color.id == runtime_param)
+    {
+        return Err(anyhow!(
+            "cross color id {runtime_param} is not configured"
+        ));
+    }
+    Ok(())
 }
 
 pub fn format_cross_value(result: &CrossResult) -> String {

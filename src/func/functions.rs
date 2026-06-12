@@ -10,8 +10,9 @@ use crate::config::{
 };
 use crate::device::{
     BlackRingDetectConfig, BlackRingDetectOutput, CameraDevice, ColorDetectConfig,
-    ColorDetectOutput, CrossDetectConfig, QrDetectConfig, format_black_ring_value,
-    run_black_ring_detect_with_frame, run_color_detect_with_frame, run_cross_detect, run_qr_detect,
+    ColorDetectOutput, CrossDetectConfig, CrossDetectOutput, QrDetectConfig,
+    format_black_ring_value, format_cross_value, run_black_ring_detect_with_frame,
+    run_color_detect_with_frame, run_cross_detect_with_frame, run_qr_detect,
 };
 use crate::func::{FunctionResult, NoDevice, ValidateParams, declare_functions};
 use crate::utils::web_tools::mat_to_jpeg_data_url;
@@ -215,14 +216,21 @@ fn black_ring_output_to_function_result(output: BlackRingDetectOutput) -> Result
 
 fn cross(
     params: &CrossDetectParams,
-    _runtime_param: u8,
+    runtime_param: u8,
     camera: &CameraDevice,
 ) -> Result<FunctionResult> {
     let config = CrossDetectConfig::from_params(params, camera);
-    let value = run_cross_detect(&config)?;
-    Ok(FunctionResult::value(
+    let output = run_cross_detect_with_frame(runtime_param, &config)?;
+    cross_output_to_function_result(output)
+}
+
+fn cross_output_to_function_result(output: CrossDetectOutput) -> Result<FunctionResult> {
+    let image = mat_to_jpeg_data_url(&output.frame)?;
+    let value = format_cross_value(&output.result);
+    Ok(FunctionResult::value_with_image(
         format!("cross finished: {value}"),
         value,
+        image,
     ))
 }
 
@@ -251,7 +259,9 @@ declare_functions! {
 mod tests {
     use opencv::{core, prelude::*};
 
-    use crate::device::{BlackRingResult, ColorDetectOutput};
+    use crate::device::{
+        BlackRingResult, ColorDetectOutput, CrossDetectOutput, CrossResult,
+    };
 
     use super::*;
 
@@ -301,6 +311,38 @@ mod tests {
 
         assert_eq!(result.text, "black_ring_detect finished: RING,1,-42,18,87");
         assert_eq!(result.value.as_deref(), Some("RING,1,-42,18,87"));
+        assert!(
+            result
+                .image
+                .as_deref()
+                .is_some_and(|image| image.starts_with("data:image/jpeg;base64,"))
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn cross_output_to_function_result_keeps_uart_value_and_image() -> Result<()> {
+        let frame = Mat::new_rows_cols_with_default(
+            8,
+            8,
+            core::CV_8UC3,
+            core::Scalar::all(255.0),
+        )?;
+        let result = cross_output_to_function_result(CrossDetectOutput {
+            result: CrossResult {
+                param: 1,
+                valid: true,
+                ring_center: None,
+                cylinder_center: None,
+                dx: 20,
+                dy: -8,
+                score: 88,
+            },
+            frame,
+        })?;
+
+        assert_eq!(result.text, "cross finished: CROSS,1,1,20,-8,88");
+        assert_eq!(result.value.as_deref(), Some("CROSS,1,1,20,-8,88"));
         assert!(
             result
                 .image
