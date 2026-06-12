@@ -96,10 +96,7 @@ mod tests {
         let (tx, mut rx) = mpsc::channel(1);
         let source = DebugSource::new(vec![binding("color")], tx);
 
-        let event = source
-            .trigger("color", 0)
-            .await
-            .expect("trigger accepted");
+        let event = source.trigger("color", 0).await.expect("trigger accepted");
 
         assert_eq!(
             event,

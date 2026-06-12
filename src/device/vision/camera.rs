@@ -1,9 +1,7 @@
 use anyhow::{Context, Result};
 use opencv::videoio;
 
-use super::config::{
-    BlackRingDetectConfig, ColorDetectConfig, CrossDetectConfig, QrDetectConfig,
-};
+use super::config::{BlackRingDetectConfig, ColorDetectConfig, CrossDetectConfig, QrDetectConfig};
 
 pub fn register_color_camera(config: &ColorDetectConfig) -> Result<videoio::VideoCapture> {
     open_camera(&config.path, "color")

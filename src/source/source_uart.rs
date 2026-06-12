@@ -81,7 +81,8 @@ impl UartSource {
 
         while let Some(bytes) = incoming.recv().await {
             pending.extend_from_slice(&bytes);
-            self.dispatch_pending_frames(&mut pending, &binding_map).await;
+            self.dispatch_pending_frames(&mut pending, &binding_map)
+                .await;
         }
 
         Err(anyhow!("UART transport input channel closed"))
@@ -111,10 +112,7 @@ impl UartSource {
         }
 
         let Some(bind) = binding_map.get(&frame.command) else {
-            warn!(
-                "UartSource ignored unknown command 0x{:02X}",
-                frame.command
-            );
+            warn!("UartSource ignored unknown command 0x{:02X}", frame.command);
             return;
         };
 
@@ -378,9 +376,7 @@ mod tests {
 
     #[test]
     fn uart_frame_parser_drops_noise_and_recovers_from_bad_tail() {
-        let mut pending = vec![
-            0x00, 0x99, 0xAA, 0x01, 0x02, 0x00, 0xAA, 0x03, 0x04, 0x55,
-        ];
+        let mut pending = vec![0x00, 0x99, 0xAA, 0x01, 0x02, 0x00, 0xAA, 0x03, 0x04, 0x55];
 
         assert_eq!(
             take_uart_frames(&mut pending),

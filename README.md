@@ -28,6 +28,7 @@ UART frame / Web source_key
 - Web、UART、GPIO 独立输出，一个 sink 失败不会阻断其他 sink。
 - GPIO 作为 Message 输出参与任务开始和结束生命周期。
 - Web 消息缓存、JSONL 持久化、历史恢复和嵌入式控制台。
+- Cross 同心圆中心识别，以及彩色圆柱相对圆心的偏移校正。
 
 ## 配置
 
@@ -145,7 +146,7 @@ pub struct TaskOutput {
 | --- | --- | --- |
 | 颜色识别 | `AA 01 00 55` | 分发 `color_detect` binding |
 | 二维码识别 | `AA 02 00 55` | 分发 `qr_detect` binding |
-| Cross 识别 | `AA 03 PARAM 55` | 分发 `cross_detect` binding并传入参数 |
+| Cross 识别 | `AA 03 PARAM 55` | 分发 `cross` binding 并传入参数 |
 | 停止任务 | `AA 04 00 55` | 预留，只记录日志 |
 | 状态/心跳 | `AA 05 00 55` | 预留，只记录日志 |
 
@@ -156,6 +157,8 @@ UART 是字节流。`UartSource` 使用 `Vec<u8>` 保存 pending 数据：
 - TAIL 错误时丢弃一个字节并重新同步。
 - 多帧会连续解析。
 - pending 超过 64 字节会记录警告并清空。
+
+旧三字节帧 `AA CMD 55` 不再作为完整命令解析。
 
 UART 输出由唯一 transport 线程持有串口。`UartSink` 发送函数结果中的
 `value`，没有 `value` 时发送 `text`，并统一追加一个换行。
@@ -181,9 +184,12 @@ http://127.0.0.1:3000
 
 ```json
 {
-  "source_key": "color"
+  "source_key": "cross",
+  "runtime_param": 1
 }
 ```
+
+`runtime_param` 可省略，省略时为 `0`。
 
 `POST /debug/trigger` 的状态码：
 
@@ -193,6 +199,38 @@ http://127.0.0.1:3000
 
 DebugSource 不直接调用函数，也不操作 GPIO 输出。它根据 binding 生成普通
 `UsualEvent`，因此设备查找、函数查找和生命周期与 UART 输入完全相同。
+
+## Cross 识别
+
+Cross binding 的 `function_id` 固定为 `cross`，单次触发的 `PARAM` 决定模式：
+
+| PARAM | 行为 |
+| --- | --- |
+| `0` | 黑色同心圆中心相对可调屏幕目标点的偏移 |
+| `1` | 红色圆柱中心相对同心圆中心的偏移 |
+| `2` | 蓝色圆柱中心相对同心圆中心的偏移 |
+| `3` | 绿色圆柱中心相对同心圆中心的偏移 |
+| `4` | 黑色圆柱中心相对同心圆中心的偏移 |
+| `5` | 白色圆柱中心相对同心圆中心的偏移 |
+
+颜色编号、HSV、面积和圆度阈值均在 `config/functions.toml` 中配置，可后续调整。
+圆环检测使用多个可见圆弧的共同圆心，因此允许外圈出画、内圈被圆柱或夹具遮挡。
+共同圆心证据不足时返回无效结果，不使用屏幕中心伪造圆心。
+
+坐标沿用 OpenCV 图像方向：
+
+- `dx > 0`：目标在基准点右侧。
+- `dy > 0`：目标在基准点下方。
+
+UART/Web 的值格式为：
+
+```text
+CROSS,param,valid,dx,dy,score
+```
+
+例如 `CROSS,1,1,36,-24,86` 表示参数 `1` 的圆柱在圆环中心右侧 36 px、
+上方 24 px。无可靠结果时输出 `CROSS,param,0,0,0,0`。Web 同时返回带目标点、
+圆环中心和圆柱中心标注的 JPEG。
 
 ## 函数生命周期
 
@@ -215,8 +253,10 @@ DebugSource 不直接调用函数，也不操作 GPIO 输出。它根据 binding
 ```rust
 fn example(
     params: &ExampleParams,
+    runtime_param: u8,
     camera: &CameraDevice,
 ) -> anyhow::Result<FunctionResult> {
+    let _ = runtime_param;
     Ok(FunctionResult::value("example finished", "result"))
 }
 ```
@@ -258,7 +298,6 @@ cargo run
 
 ## 已知保留项
 
-- `cross_detect` 当前仍是占位结果，未实现真实路口识别算法。
 - UART `0x04` 和 `0x05` 只作为协议标识保留。
 - TimerSource 和 LoopSource 仍是基础实现。
 - 远期通用 SDK 设想记录在 `changeTask/toSDK.md`，本轮不实施。
@@ -267,4 +306,6 @@ cargo run
 
 - `docs/superpowers/specs/2026-06-07-layered-engine-refactor-design.md`
 - `docs/superpowers/plans/2026-06-07-layered-engine-refactor.md`
+- `docs/superpowers/specs/2026-06-12-cross-ring-cylinder-design.md`
+- `docs/superpowers/plans/2026-06-12-cross-ring-cylinder.md`
 - `changeTask/completed.md`

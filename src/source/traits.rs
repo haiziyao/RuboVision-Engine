@@ -15,12 +15,7 @@ pub enum Event {
     OtherEvent(String),
 }
 
-pub fn make_event_usual(
-    task_id: &str,
-    func_id: &str,
-    device_id: &str,
-    runtime_param: u8,
-) -> Event {
+pub fn make_event_usual(task_id: &str, func_id: &str, device_id: &str, runtime_param: u8) -> Event {
     Event::UsualEvent {
         task_id: task_id.to_string(),
         function_id: func_id.to_string(),

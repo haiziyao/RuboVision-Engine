@@ -12,8 +12,8 @@ use crate::utils::cv_util::bgr_to_gray;
 use crate::web::WebMessage;
 
 use super::super::color::analyze_color_frame;
-use super::super::{format_cross_value, run_cross_detect_with_frame};
 use super::super::{ColorDetectConfig, QrDetectConfig};
+use super::super::{format_cross_value, run_cross_detect_with_frame};
 use super::support::{
     color_detect_config_from_config, cross_detect_config_from_config, draw_label, open_camera,
     qr_detect_config_from_config, read_non_empty_frame, web_config_from_config,

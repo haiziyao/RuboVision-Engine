@@ -47,8 +47,7 @@ pub async fn execute(
         warn!("task pre_func message failed: {error:#}");
     }
 
-    let execution =
-        tokio::task::spawn_blocking(move || execute_sync(device, func, runtime_param))
+    let execution = tokio::task::spawn_blocking(move || execute_sync(device, func, runtime_param))
         .await
         .context("blocking task join failed")
         .and_then(|result| result);
@@ -117,9 +116,7 @@ mod tests {
         let worker = FunctionWorker::new(
             "test",
             returns,
-            Arc::new(|_runtime_param, _device| {
-                Ok(TaskOutput::value("task finished", "42"))
-            }),
+            Arc::new(|_runtime_param, _device| Ok(TaskOutput::value("task finished", "42"))),
         );
 
         execute(router, Device::None, worker, 0).await?;

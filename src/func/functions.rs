@@ -113,9 +113,7 @@ impl ValidateParams for CrossDetectParams {
 
         let ids: HashSet<u8> = self.colors.iter().map(|color| color.id).collect();
         if ids != HashSet::from([1, 2, 3, 4, 5]) || self.colors.len() != 5 {
-            return Err(anyhow!(
-                "cross colors must contain unique ids 1 through 5"
-            ));
+            return Err(anyhow!("cross colors must contain unique ids 1 through 5"));
         }
 
         for color in &self.colors {
@@ -259,9 +257,7 @@ declare_functions! {
 mod tests {
     use opencv::{core, prelude::*};
 
-    use crate::device::{
-        BlackRingResult, ColorDetectOutput, CrossDetectOutput, CrossResult,
-    };
+    use crate::device::{BlackRingResult, ColorDetectOutput, CrossDetectOutput, CrossResult};
 
     use super::*;
 
@@ -322,12 +318,7 @@ mod tests {
 
     #[test]
     fn cross_output_to_function_result_keeps_uart_value_and_image() -> Result<()> {
-        let frame = Mat::new_rows_cols_with_default(
-            8,
-            8,
-            core::CV_8UC3,
-            core::Scalar::all(255.0),
-        )?;
+        let frame = Mat::new_rows_cols_with_default(8, 8, core::CV_8UC3, core::Scalar::all(255.0))?;
         let result = cross_output_to_function_result(CrossDetectOutput {
             result: CrossResult {
                 param: 1,

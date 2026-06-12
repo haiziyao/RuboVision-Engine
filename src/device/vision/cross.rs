@@ -125,13 +125,7 @@ pub fn analyze_cross_frame(
             None => None,
         }
     };
-    let result = cross_result(
-        group,
-        cylinder,
-        runtime_param,
-        frame_bgr.size()?,
-        config,
-    );
+    let result = cross_result(group, cylinder, runtime_param, frame_bgr.size()?, config);
     let annotated = draw_cross_overlay(frame_bgr, &result, config)?;
 
     Ok(CrossFrameAnalysis {
@@ -146,15 +140,8 @@ fn validate_runtime_param(runtime_param: u8, config: &CrossDetectConfig) -> Resu
     if runtime_param > 5 {
         return Err(anyhow!("cross runtime_param must be in 0..=5"));
     }
-    if runtime_param > 0
-        && !config
-            .colors
-            .iter()
-            .any(|color| color.id == runtime_param)
-    {
-        return Err(anyhow!(
-            "cross color id {runtime_param} is not configured"
-        ));
+    if runtime_param > 0 && !config.colors.iter().any(|color| color.id == runtime_param) {
+        return Err(anyhow!("cross color id {runtime_param} is not configured"));
     }
     Ok(())
 }
@@ -234,10 +221,7 @@ fn black_mask(gray: &Mat, threshold: i32) -> Result<Mat> {
     Ok(cleaned)
 }
 
-fn ring_candidates(
-    black_mask: &Mat,
-    config: &CrossDetectConfig,
-) -> Result<Vec<RingCandidate>> {
+fn ring_candidates(black_mask: &Mat, config: &CrossDetectConfig) -> Result<Vec<RingCandidate>> {
     let mut contours = types::VectorOfVectorOfPoint::new();
     imgproc::find_contours(
         black_mask,
@@ -291,9 +275,7 @@ fn fit_ring_candidate(
     let largest_gap = angles
         .windows(2)
         .map(|pair| pair[1] - pair[0])
-        .chain(std::iter::once(
-            angles[0] + TAU - angles[angles.len() - 1],
-        ))
+        .chain(std::iter::once(angles[0] + TAU - angles[angles.len() - 1]))
         .fold(0.0_f64, f64::max);
     let coverage = TAU - largest_gap;
     if coverage < PI / 8.0 {
@@ -311,9 +293,7 @@ fn fit_ring_candidate(
     }))
 }
 
-fn least_squares_circle(
-    contour: &types::VectorOfPoint,
-) -> Result<Option<(Point2f, f64)>> {
+fn least_squares_circle(contour: &types::VectorOfPoint) -> Result<Option<(Point2f, f64)>> {
     let mut matrix = [[0.0_f64; 4]; 3];
     for index in 0..contour.len() {
         let point = contour.get(index)?;
@@ -387,10 +367,7 @@ fn solve_3x3(mut matrix: [[f64; 4]; 3]) -> Option<[f64; 3]> {
     Some([matrix[0][3], matrix[1][3], matrix[2][3]])
 }
 
-fn best_ring_group(
-    candidates: &[RingCandidate],
-    config: &CrossDetectConfig,
-) -> Option<RingGroup> {
+fn best_ring_group(candidates: &[RingCandidate], config: &CrossDetectConfig) -> Option<RingGroup> {
     candidates
         .iter()
         .filter_map(|seed| score_ring_group(seed, candidates, config))
@@ -404,7 +381,9 @@ fn score_ring_group(
 ) -> Option<RingGroup> {
     let members: Vec<&RingCandidate> = candidates
         .iter()
-        .filter(|candidate| point_distance(seed.center, candidate.center) <= config.center_tolerance)
+        .filter(|candidate| {
+            point_distance(seed.center, candidate.center) <= config.center_tolerance
+        })
         .collect();
     if members.len() < 3 {
         return None;
@@ -431,9 +410,10 @@ fn score_ring_group(
     radii.sort_by(f32::total_cmp);
     let mut distinct_radii = Vec::new();
     for radius in radii {
-        if distinct_radii.last().is_none_or(|previous: &f32| {
-            (radius - *previous) > (4.0_f32).max(*previous * 0.03)
-        }) {
+        if distinct_radii
+            .last()
+            .is_none_or(|previous: &f32| (radius - *previous) > (4.0_f32).max(*previous * 0.03))
+        {
             distinct_radii.push(radius);
         }
     }
@@ -461,8 +441,7 @@ fn score_ring_group(
     let coverage_score = (total_coverage / (TAU * 4.0)).clamp(0.0, 1.0) * 30.0;
     let residual_score =
         (1.0 - average_residual / config.center_tolerance.max(1.0)).clamp(0.0, 1.0) * 10.0;
-    let center_score =
-        (1.0 - center_spread / config.center_tolerance).clamp(0.0, 1.0) * 10.0;
+    let center_score = (1.0 - center_spread / config.center_tolerance).clamp(0.0, 1.0) * 10.0;
     let score = (radius_score + coverage_score + residual_score + center_score)
         .round()
         .clamp(0.0, 100.0) as u8;
@@ -674,11 +653,7 @@ fn draw_cross_overlay(
         size.width / 2 + config.target_correction.x,
         size.height / 2 + config.target_correction.y,
     );
-    draw_marker(
-        &mut annotated,
-        target,
-        Scalar::new(255.0, 0.0, 0.0, 0.0),
-    )?;
+    draw_marker(&mut annotated, target, Scalar::new(255.0, 0.0, 0.0, 0.0))?;
     if let Some(center) = result.ring_center {
         draw_marker(
             &mut annotated,
