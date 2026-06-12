@@ -2,7 +2,7 @@
 
 use std::f64::consts::{PI, TAU};
 
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use opencv::{
     core::{self, Mat, Point, Point2f, Scalar, Size},
     imgproc,
@@ -10,9 +10,9 @@ use opencv::{
     types,
 };
 
-use crate::utils::cv_util::bgr_to_gray;
+use crate::utils::cv_util::{bgr_to_gray, hsv_inrange, hsv_scalar_factory};
 
-use super::config::CrossDetectConfig;
+use super::config::{CrossColor, CrossDetectConfig};
 
 #[derive(Debug, Clone)]
 pub struct CrossResult {
@@ -45,6 +45,13 @@ struct RingCandidate {
 #[derive(Debug, Clone)]
 struct RingGroup {
     center: Point2f,
+    outer_radius: f32,
+    score: u8,
+}
+
+#[derive(Debug, Clone)]
+struct CylinderCandidate {
+    center: Point2f,
     score: u8,
 }
 
@@ -58,11 +65,33 @@ pub fn analyze_cross_frame(
     runtime_param: u8,
     config: &CrossDetectConfig,
 ) -> Result<CrossFrameAnalysis> {
+    if runtime_param > 5 {
+        return Err(anyhow!("cross runtime_param must be in 0..=5"));
+    }
     let gray = bgr_to_gray(frame_bgr)?;
     let black_mask = black_mask(&gray, config.black_threshold)?;
     let candidates = ring_candidates(&black_mask, config)?;
     let group = best_ring_group(&candidates, config);
-    let result = cross_result(group, runtime_param, frame_bgr.size()?, config);
+    let cylinder = if runtime_param == 0 {
+        None
+    } else {
+        let color = config
+            .colors
+            .iter()
+            .find(|color| color.id == runtime_param)
+            .ok_or_else(|| anyhow!("cross color id {runtime_param} is not configured"))?;
+        match group.as_ref() {
+            Some(group) => best_cylinder_candidate(frame_bgr, color, group)?,
+            None => None,
+        }
+    };
+    let result = cross_result(
+        group,
+        cylinder,
+        runtime_param,
+        frame_bgr.size()?,
+        config,
+    );
     let annotated = draw_cross_overlay(frame_bgr, &result, config)?;
 
     Ok(CrossFrameAnalysis {
@@ -366,6 +395,10 @@ fn score_ring_group(
         .map(|candidate| point_distance(center, candidate.center) * candidate.weight)
         .sum::<f64>()
         / total_weight;
+    let outer_radius = members
+        .iter()
+        .map(|candidate| candidate.radius)
+        .fold(0.0_f32, f32::max);
 
     let radius_score = (distinct_radii.len().min(6) as f64 / 6.0) * 50.0;
     let coverage_score = (total_coverage / (TAU * 4.0)).clamp(0.0, 1.0) * 30.0;
@@ -376,15 +409,165 @@ fn score_ring_group(
     let score = (radius_score + coverage_score + residual_score + center_score)
         .round()
         .clamp(0.0, 100.0) as u8;
-    (score >= config.min_ring_score).then_some(RingGroup { center, score })
+    (score >= config.min_ring_score).then_some(RingGroup {
+        center,
+        outer_radius,
+        score,
+    })
 }
 
 fn point_distance(left: Point2f, right: Point2f) -> f64 {
     (left.x as f64 - right.x as f64).hypot(left.y as f64 - right.y as f64)
 }
 
+fn best_cylinder_candidate(
+    frame_bgr: &Mat,
+    color: &CrossColor,
+    ring: &RingGroup,
+) -> Result<Option<CylinderCandidate>> {
+    let (lower, upper) = hsv_scalar_factory(color.hsv)?;
+    let raw_mask = hsv_inrange(frame_bgr, &lower, &upper)?;
+    let kernel_size = if color.id == 4 { 11 } else { 5 };
+    let kernel = imgproc::get_structuring_element(
+        imgproc::MORPH_ELLIPSE,
+        Size::new(kernel_size, kernel_size),
+        Point::new(-1, -1),
+    )?;
+    let mut opened = Mat::default();
+    imgproc::morphology_ex(
+        &raw_mask,
+        &mut opened,
+        imgproc::MORPH_OPEN,
+        &kernel,
+        Point::new(-1, -1),
+        1,
+        core::BORDER_CONSTANT,
+        Scalar::all(0.0),
+    )?;
+    let mut mask = Mat::default();
+    imgproc::morphology_ex(
+        &opened,
+        &mut mask,
+        imgproc::MORPH_CLOSE,
+        &kernel,
+        Point::new(-1, -1),
+        1,
+        core::BORDER_CONSTANT,
+        Scalar::all(0.0),
+    )?;
+
+    let mut contours = types::VectorOfVectorOfPoint::new();
+    imgproc::find_contours(
+        &mask,
+        &mut contours,
+        imgproc::RETR_EXTERNAL,
+        imgproc::CHAIN_APPROX_SIMPLE,
+        Point::new(0, 0),
+    )?;
+
+    let mut best: Option<CylinderCandidate> = None;
+    for index in 0..contours.len() {
+        let contour = contours.get(index)?;
+        let Some(candidate) = score_cylinder_contour(&mask, &contour, color, ring)? else {
+            continue;
+        };
+        if best
+            .as_ref()
+            .is_none_or(|current| candidate.score > current.score)
+        {
+            best = Some(candidate);
+        }
+    }
+    Ok(best)
+}
+
+fn score_cylinder_contour(
+    color_mask: &Mat,
+    contour: &types::VectorOfPoint,
+    color: &CrossColor,
+    ring: &RingGroup,
+) -> Result<Option<CylinderCandidate>> {
+    if contour.len() < 5 {
+        return Ok(None);
+    }
+    let area = imgproc::contour_area(contour, false)?;
+    let perimeter = imgproc::arc_length(contour, true)?;
+    if area < color.min_area || perimeter <= 0.0 {
+        return Ok(None);
+    }
+
+    let circularity = (4.0 * PI * area / (perimeter * perimeter)).clamp(0.0, 1.0);
+    if circularity < color.min_circularity {
+        return Ok(None);
+    }
+
+    let rect = imgproc::bounding_rect(contour)?;
+    if rect.width <= 0 || rect.height <= 0 {
+        return Ok(None);
+    }
+    let aspect = rect.width as f64 / rect.height as f64;
+    if !(0.65..=1.45).contains(&aspect) {
+        return Ok(None);
+    }
+
+    let moments = imgproc::moments(contour, false)?;
+    if moments.m00.abs() < f64::EPSILON {
+        return Ok(None);
+    }
+    let center = Point2f::new(
+        (moments.m10 / moments.m00) as f32,
+        (moments.m01 / moments.m00) as f32,
+    );
+    let distance = point_distance(center, ring.center);
+    let allowed_distance = ring.outer_radius as f64 * 1.15;
+    if distance > allowed_distance {
+        return Ok(None);
+    }
+
+    let equivalent_radius = (area / PI).sqrt();
+    if equivalent_radius > ring.outer_radius as f64 * 0.75 {
+        return Ok(None);
+    }
+
+    let fill_ratio = contour_fill_ratio(color_mask, contour)?;
+    if fill_ratio < 0.55 {
+        return Ok(None);
+    }
+
+    let distance_score = (1.0 - distance / allowed_distance).clamp(0.0, 1.0);
+    let score = (circularity * 50.0 + fill_ratio * 30.0 + distance_score * 20.0)
+        .round()
+        .clamp(0.0, 100.0) as u8;
+    Ok(Some(CylinderCandidate { center, score }))
+}
+
+fn contour_fill_ratio(mask: &Mat, contour: &types::VectorOfPoint) -> Result<f64> {
+    let size = mask.size()?;
+    let mut contour_mask = Mat::zeros(size.height, size.width, core::CV_8UC1)?.to_mat()?;
+    let mut contours = types::VectorOfVectorOfPoint::new();
+    contours.push(contour.clone());
+    imgproc::draw_contours(
+        &mut contour_mask,
+        &contours,
+        0,
+        Scalar::all(255.0),
+        -1,
+        imgproc::LINE_8,
+        &core::no_array(),
+        i32::MAX,
+        Point::new(0, 0),
+    )?;
+
+    let mut filled = Mat::default();
+    core::bitwise_and(mask, mask, &mut filled, &contour_mask)?;
+    let total = core::count_non_zero(&contour_mask)? as f64;
+    let hit = core::count_non_zero(&filled)? as f64;
+    Ok(if total > 0.0 { hit / total } else { 0.0 })
+}
+
 fn cross_result(
     group: Option<RingGroup>,
+    cylinder: Option<CylinderCandidate>,
     runtime_param: u8,
     size: Size,
     config: &CrossDetectConfig,
@@ -393,9 +576,20 @@ fn cross_result(
         return CrossResult::invalid(runtime_param);
     };
     if runtime_param != 0 {
+        let Some(cylinder) = cylinder else {
+            return CrossResult {
+                ring_center: Some(group.center),
+                ..CrossResult::invalid(runtime_param)
+            };
+        };
         return CrossResult {
+            param: runtime_param,
+            valid: true,
             ring_center: Some(group.center),
-            ..CrossResult::invalid(runtime_param)
+            cylinder_center: Some(cylinder.center),
+            dx: cylinder.center.x.round() as i32 - group.center.x.round() as i32,
+            dy: cylinder.center.y.round() as i32 - group.center.y.round() as i32,
+            score: group.score.min(cylinder.score),
         };
     }
 
@@ -435,6 +629,13 @@ fn draw_cross_overlay(
             Scalar::new(0.0, 255.0, 0.0, 0.0),
         )?;
     }
+    if let Some(center) = result.cylinder_center {
+        draw_marker(
+            &mut annotated,
+            Point::new(center.x.round() as i32, center.y.round() as i32),
+            cylinder_marker_color(result.param),
+        )?;
+    }
 
     imgproc::put_text(
         &mut annotated,
@@ -448,6 +649,17 @@ fn draw_cross_overlay(
         false,
     )?;
     Ok(annotated)
+}
+
+fn cylinder_marker_color(param: u8) -> Scalar {
+    match param {
+        1 => Scalar::new(0.0, 0.0, 255.0, 0.0),
+        2 => Scalar::new(255.0, 0.0, 0.0, 0.0),
+        3 => Scalar::new(0.0, 255.0, 0.0, 0.0),
+        4 => Scalar::new(32.0, 32.0, 32.0, 0.0),
+        5 => Scalar::new(255.0, 255.0, 255.0, 0.0),
+        _ => Scalar::new(0.0, 255.0, 255.0, 0.0),
+    }
 }
 
 fn draw_marker(frame: &mut Mat, center: Point, color: Scalar) -> Result<()> {

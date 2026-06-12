@@ -55,7 +55,7 @@ colors = [
     { id = 2, name = "blue", hsv = [90, 140, 80, 255, 50, 255], min_area = 500.0, min_circularity = 0.60 },
     { id = 3, name = "green", hsv = [35, 90, 70, 255, 50, 255], min_area = 500.0, min_circularity = 0.60 },
     { id = 4, name = "black", hsv = [0, 179, 0, 255, 0, 70], min_area = 500.0, min_circularity = 0.60 },
-    { id = 5, name = "white", hsv = [0, 179, 0, 60, 140, 255], min_area = 500.0, min_circularity = 0.60 },
+    { id = 5, name = "white", hsv = [0, 179, 0, 60, 230, 255], min_area = 500.0, min_circularity = 0.60 },
 ]
 
 [[functions.entries]]
