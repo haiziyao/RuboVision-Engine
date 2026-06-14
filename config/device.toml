@@ -6,7 +6,7 @@ path = "/dev/video2"
 [[devices.list]]
 device_id = "qr_camera"
 kind = "Camera"
-path = "/dev/video4"
+path = "/dev/video2"
 
 [[devices.list]]
 device_id = "cross_camera"
