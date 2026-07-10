@@ -168,3 +168,4 @@ message = "debug"
 [qr_detect]
 debug_model = false
 device_id = "qr_camera"
+loop_count = 30

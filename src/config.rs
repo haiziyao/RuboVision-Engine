@@ -6,6 +6,8 @@ use rubo_engine::{
     },
 };
 
+use crate::sink::{GpioSink, HeadlessWebSink};
+
 pub const UART_SOURCE_ID: &str = "uart";
 pub const COLOR_CAMERA_ID: &str = "color_camera";
 pub const QR_CAMERA_ID: &str = "qr_camera";
@@ -31,9 +33,25 @@ pub fn default_rubo_config() -> RuboConfig {
 pub fn build_engine(
     root: impl AsRef<std::path::Path>,
     app_config: AppConfig,
-    rubo_config: RuboConfig,
+    mut rubo_config: RuboConfig,
 ) -> Engine {
-    Engine::new(root, app_config, rubo_config)
+    let web_enabled = app_config.web().enabled();
+    if !web_enabled {
+        rubo_config
+            .bindings_mut()
+            .retain(|_, binding| binding.source_ref().id() != WEB_SINK_ID);
+    }
+    let gpio = rubo_config
+        .sinks()
+        .get(GPIO_SINK_ID)
+        .map(GpioSink::from_config)
+        .unwrap_or_default();
+    let mut engine = Engine::new(root, app_config, rubo_config);
+    engine.register_function_aspect(gpio);
+    if !web_enabled {
+        engine.register_sink(WEB_SINK_ID, HeadlessWebSink);
+    }
+    engine
 }
 
 fn insert_sources(config: &mut RuboConfig) {
@@ -79,7 +97,8 @@ fn insert_functions(config: &mut RuboConfig) {
         "qr_detect".to_string(),
         FuncConfig::new("qr_detect")
             .set("device_id", QR_CAMERA_ID)
-            .set("debug_model", false),
+            .set("debug_model", false)
+            .set("loop_count", 30_i32),
     );
     config.funcs_mut().insert(
         "black_ring_detect".to_string(),
@@ -265,5 +284,17 @@ mod tests {
             .expect("test runtime config lock poisoned");
         assert!(runtime_config.validate());
         assert_eq!(runtime_config.bindings().len(), 9);
+    }
+
+    #[test]
+    fn headless_config_test() {
+        let app_config: AppConfig = serde_json::from_value(serde_json::json!({
+            "web": { "enabled": false }
+        }))
+        .unwrap();
+        let engine = build_engine(".", app_config, default_rubo_config());
+
+        assert!(!engine.config().bindings().contains_key("debug"));
+        assert!(engine.sinks().contains(WEB_SINK_ID));
     }
 }

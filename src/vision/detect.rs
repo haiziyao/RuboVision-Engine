@@ -6,7 +6,7 @@ mod opencv_impl {
         core::{self, Mat, Point, Point2f, Scalar, Size},
         imgproc,
         prelude::*,
-        types, videoio,
+        types,
     };
 
     pub struct VisionFrameOutput<T> {
@@ -22,7 +22,6 @@ mod opencv_impl {
 
     #[derive(Debug, Clone)]
     pub struct ColorDetectConfig {
-        pub path: String,
         pub loop_count: i32,
         pub radius_ratio: f64,
         pub detect_area_access_rate: f64,
@@ -44,7 +43,6 @@ mod opencv_impl {
 
     #[derive(Debug, Clone)]
     pub struct BlackRingDetectConfig {
-        pub path: String,
         pub loop_count: i32,
         pub target_correction: TargetCorrection,
         pub black_threshold: i32,
@@ -65,7 +63,6 @@ mod opencv_impl {
 
     #[derive(Debug, Clone)]
     pub struct CrossDetectConfig {
-        pub path: String,
         pub loop_count: i32,
         pub target_correction: TargetCorrection,
         pub black_threshold: i32,
@@ -80,41 +77,32 @@ mod opencv_impl {
         pub colors: Vec<CrossColor>,
     }
 
-    pub fn detect_color(config: &ColorDetectConfig) -> opencv::Result<VisionFrameOutput<String>> {
-        let mut cam = open_camera(&config.path)?;
-        let mut best_color = String::new();
-        let mut count = 0;
-        loop {
-            let mut frame = Mat::default();
-            cam.read(&mut frame)?;
-            if frame.empty() {
-                continue;
-            }
+    pub fn detect_color(
+        frames: Vec<Mat>,
+        config: &ColorDetectConfig,
+    ) -> opencv::Result<VisionFrameOutput<String>> {
+        let mut best_color = "unknown".to_string();
+        let mut best_ratio = -1.0_f64;
+        let mut best_frame = None;
+        for frame in frames {
             let (color, ratio) = detect_color_frame(&frame, config)?;
-            if best_color == color {
-                count += 1;
-            } else {
+            if ratio > best_ratio {
                 best_color = color;
-                count = 1;
-            }
-            if count >= config.loop_count.max(1) {
-                draw_color_overlay(&mut frame, &best_color, ratio, config.radius_ratio)?;
-                return Ok(VisionFrameOutput {
-                    value: best_color,
-                    frame,
-                });
+                best_ratio = ratio;
+                best_frame = Some(frame);
             }
         }
+        let mut frame = best_frame.ok_or_else(no_frames_error)?;
+        draw_color_overlay(&mut frame, &best_color, best_ratio, config.radius_ratio)?;
+        Ok(VisionFrameOutput {
+            value: best_color,
+            frame,
+        })
     }
 
-    pub fn detect_qr(path: &str) -> opencv::Result<VisionFrameOutput<String>> {
-        let mut cam = open_camera(path)?;
-        loop {
-            let mut frame = Mat::default();
-            cam.read(&mut frame)?;
-            if frame.empty() {
-                continue;
-            }
+    pub fn detect_qr(frames: Vec<Mat>) -> opencv::Result<VisionFrameOutput<String>> {
+        let mut last_frame = None;
+        for frame in frames {
             let gray = bgr_to_gray(&frame)?;
             let content = decode_qr(&gray)?;
             if !content.is_empty() {
@@ -123,59 +111,54 @@ mod opencv_impl {
                     frame,
                 });
             }
+            last_frame = Some(frame);
         }
+        Ok(VisionFrameOutput {
+            value: String::new(),
+            frame: last_frame.ok_or_else(no_frames_error)?,
+        })
     }
 
     pub fn detect_black_ring(
+        frames: Vec<Mat>,
         config: &BlackRingDetectConfig,
     ) -> opencv::Result<VisionFrameOutput<String>> {
-        let mut cam = open_camera(&config.path)?;
         let mut best_value = "RING,0,0,0,0".to_string();
         let mut best_score = 0_u8;
-        let mut best_frame = Mat::default();
-        for _ in 0..config.loop_count.max(1) {
-            let mut frame = Mat::default();
-            cam.read(&mut frame)?;
-            if frame.empty() {
-                continue;
-            }
+        let mut best_frame = None;
+        for frame in frames {
             let result = analyze_black_ring_frame(&frame, config)?;
             if result.score >= best_score {
                 best_score = result.score;
                 best_value = result.value;
-                best_frame = result.frame;
+                best_frame = Some(result.frame);
             }
         }
         Ok(VisionFrameOutput {
             value: best_value,
-            frame: best_frame,
+            frame: best_frame.ok_or_else(no_frames_error)?,
         })
     }
 
     pub fn detect_cross(
+        frames: Vec<Mat>,
         config: &CrossDetectConfig,
         runtime_param: u8,
     ) -> opencv::Result<VisionFrameOutput<String>> {
-        let mut cam = open_camera(&config.path)?;
         let mut best_value = format!("CROSS,{runtime_param},0,0,0,0");
         let mut best_score = 0_u8;
-        let mut best_frame = Mat::default();
-        for _ in 0..config.loop_count.max(1) {
-            let mut frame = Mat::default();
-            cam.read(&mut frame)?;
-            if frame.empty() {
-                continue;
-            }
+        let mut best_frame = None;
+        for frame in frames {
             let result = analyze_cross_frame(&frame, config, runtime_param)?;
             if result.score >= best_score {
                 best_score = result.score;
                 best_value = result.value;
-                best_frame = result.frame;
+                best_frame = Some(result.frame);
             }
         }
         Ok(VisionFrameOutput {
             value: best_value,
-            frame: best_frame,
+            frame: best_frame.ok_or_else(no_frames_error)?,
         })
     }
 
@@ -185,8 +168,8 @@ mod opencv_impl {
         frame: Mat,
     }
 
-    fn open_camera(path: &str) -> opencv::Result<videoio::VideoCapture> {
-        videoio::VideoCapture::from_file(path, videoio::CAP_V4L2)
+    fn no_frames_error() -> opencv::Error {
+        opencv::Error::new(core::StsError, "camera returned no frames".to_string())
     }
 
     fn bgr_to_gray(frame: &Mat) -> opencv::Result<Mat> {
