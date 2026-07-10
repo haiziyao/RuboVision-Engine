@@ -1,0 +1,10 @@
+name: rubo_vision
+config_path: config
+config_format: toml
+web:
+  enabled: true
+  host: 127.0.0.1
+  port: 3888
+log:
+  enabled: true
+  level: info

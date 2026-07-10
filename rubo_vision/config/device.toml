@@ -1,0 +1,11 @@
+[color_camera]
+kind = "camera"
+path = "/dev/video2"
+
+[cross_camera]
+kind = "camera"
+path = "/dev/video2"
+
+[qr_camera]
+kind = "camera"
+path = "/dev/video2"

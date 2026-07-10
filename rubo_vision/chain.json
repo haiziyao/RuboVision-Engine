@@ -1,0 +1,382 @@
+[
+  {
+    "binding": "debug",
+    "source": {
+      "id": "web",
+      "event": "debug",
+      "kind": null,
+      "config": {}
+    },
+    "function": {
+      "id": "debug_fun",
+      "config": {
+        "message": "debug"
+      }
+    },
+    "devices": [],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      }
+    ],
+    "debug": true
+  },
+  {
+    "binding": "uart_black_ring_detect",
+    "source": {
+      "id": "uart",
+      "event": "4",
+      "kind": "uart",
+      "config": {
+        "baud": 9600,
+        "data_bit": 8,
+        "parity_bit": false,
+        "serial": "/dev/ttyV0",
+        "stop_bit": 1
+      }
+    },
+    "function": {
+      "id": "black_ring_detect",
+      "config": {
+        "black_threshold": 90,
+        "debug_model": false,
+        "device_id": "color_camera",
+        "loop_count": 3,
+        "max_radius": 180.0,
+        "min_circularity": 0.65,
+        "min_radius": 20.0,
+        "min_score": 50,
+        "target_correction": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    "devices": [
+      {
+        "id": "color_camera",
+        "kind": "camera",
+        "config": {
+          "path": "/dev/video2"
+        }
+      }
+    ],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 9600,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/dev/ttyV0",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  },
+  {
+    "binding": "uart_color_detect",
+    "source": {
+      "id": "uart",
+      "event": "1",
+      "kind": "uart",
+      "config": {
+        "baud": 9600,
+        "data_bit": 8,
+        "parity_bit": false,
+        "serial": "/dev/ttyV0",
+        "stop_bit": 1
+      }
+    },
+    "function": {
+      "id": "color_detect",
+      "config": {
+        "color_ranges": [
+          {
+            "hsv": [
+              0,
+              50,
+              160,
+              255,
+              110,
+              255
+            ],
+            "name": "red"
+          },
+          {
+            "hsv": [
+              100,
+              137,
+              124,
+              255,
+              56,
+              255
+            ],
+            "name": "blue"
+          },
+          {
+            "hsv": [
+              50,
+              100,
+              91,
+              255,
+              85,
+              255
+            ],
+            "name": "green"
+          },
+          {
+            "hsv": [
+              0,
+              179,
+              0,
+              255,
+              0,
+              76
+            ],
+            "name": "black"
+          },
+          {
+            "hsv": [
+              0,
+              170,
+              0,
+              55,
+              120,
+              255
+            ],
+            "name": "white"
+          }
+        ],
+        "debug_model": false,
+        "detect_area_access_rate": 0.8,
+        "device_id": "color_camera",
+        "loop_count": 5,
+        "radius_ratio": 0.4
+      }
+    },
+    "devices": [
+      {
+        "id": "color_camera",
+        "kind": "camera",
+        "config": {
+          "path": "/dev/video2"
+        }
+      }
+    ],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 9600,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/dev/ttyV0",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  },
+  {
+    "binding": "uart_cross_detect",
+    "source": {
+      "id": "uart",
+      "event": "3",
+      "kind": "uart",
+      "config": {
+        "baud": 9600,
+        "data_bit": 8,
+        "parity_bit": false,
+        "serial": "/dev/ttyV0",
+        "stop_bit": 1
+      }
+    },
+    "function": {
+      "id": "cross",
+      "config": {
+        "black_threshold": 90,
+        "center_tolerance": 14.0,
+        "close_kernel_size": 5,
+        "colors": [
+          {
+            "hsv": [
+              0,
+              20,
+              100,
+              255,
+              80,
+              255
+            ],
+            "id": 1,
+            "min_area": 500.0,
+            "min_circularity": 0.6,
+            "name": "red"
+          },
+          {
+            "hsv": [
+              90,
+              140,
+              80,
+              255,
+              50,
+              255
+            ],
+            "id": 2,
+            "min_area": 500.0,
+            "min_circularity": 0.6,
+            "name": "blue"
+          },
+          {
+            "hsv": [
+              35,
+              90,
+              70,
+              255,
+              50,
+              255
+            ],
+            "id": 3,
+            "min_area": 500.0,
+            "min_circularity": 0.6,
+            "name": "green"
+          },
+          {
+            "hsv": [
+              0,
+              179,
+              0,
+              255,
+              0,
+              70
+            ],
+            "id": 4,
+            "min_area": 500.0,
+            "min_circularity": 0.6,
+            "name": "black"
+          },
+          {
+            "hsv": [
+              0,
+              179,
+              0,
+              60,
+              230,
+              255
+            ],
+            "id": 5,
+            "min_area": 500.0,
+            "min_circularity": 0.6,
+            "name": "white"
+          }
+        ],
+        "debug_model": false,
+        "device_id": "cross_camera",
+        "dilate_iterations": 1,
+        "dilate_kernel_size": 3,
+        "loop_count": 3,
+        "max_radius": 600.0,
+        "min_arc_points": 24,
+        "min_radius": 20.0,
+        "min_ring_score": 50,
+        "target_correction": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    "devices": [
+      {
+        "id": "cross_camera",
+        "kind": "camera",
+        "config": {
+          "path": "/dev/video2"
+        }
+      }
+    ],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 9600,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/dev/ttyV0",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  },
+  {
+    "binding": "uart_qr_detect",
+    "source": {
+      "id": "uart",
+      "event": "2",
+      "kind": "uart",
+      "config": {
+        "baud": 9600,
+        "data_bit": 8,
+        "parity_bit": false,
+        "serial": "/dev/ttyV0",
+        "stop_bit": 1
+      }
+    },
+    "function": {
+      "id": "qr_detect",
+      "config": {
+        "debug_model": false,
+        "device_id": "qr_camera"
+      }
+    },
+    "devices": [
+      {
+        "id": "qr_camera",
+        "kind": "camera",
+        "config": {
+          "path": "/dev/video2"
+        }
+      }
+    ],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 9600,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/dev/ttyV0",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  }
+]
