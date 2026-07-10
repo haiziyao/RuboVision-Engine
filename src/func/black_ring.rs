@@ -12,7 +12,7 @@ impl Function for BlackRingDetect {
     async fn call(&self, call: FunctionCall<'_>) -> Result<FuncResult, FunctionError> {
         let device_id = call
             .function_config()
-            .get_or("device_id", "color_camera".to_string())?;
+            .get_or("device_id", "camera".to_string())?;
         let camera = call.devices().get::<CameraDevice>(&device_id)?;
         run_black_ring_detect(camera, call.function_config()).await
     }
@@ -79,7 +79,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires Ubuntu, OpenCV and a configured camera"]
     async fn black_ring_detect_test() {
-        let (config, camera) = crate::vision::test::load_camera("color_camera")
+        let (config, camera) = crate::vision::test::load_camera("camera")
             .await
             .expect("load color camera");
         let output = black_ring_detect_output(camera, &config.funcs()["black_ring_detect"])

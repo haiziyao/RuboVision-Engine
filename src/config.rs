@@ -9,9 +9,7 @@ use rubo_engine::{
 use crate::sink::{GpioSink, HeadlessWebSink};
 
 pub const UART_SOURCE_ID: &str = "uart";
-pub const COLOR_CAMERA_ID: &str = "color_camera";
-pub const QR_CAMERA_ID: &str = "qr_camera";
-pub const CROSS_CAMERA_ID: &str = "cross_camera";
+pub const CAMERA_ID: &str = "camera";
 pub const WEB_SINK_ID: &str = "web";
 pub const UART_SINK_ID: &str = "uart";
 pub const GPIO_SINK_ID: &str = "gpio";
@@ -69,16 +67,8 @@ fn insert_sources(config: &mut RuboConfig) {
 
 fn insert_devices(config: &mut RuboConfig) {
     config.devices_mut().insert(
-        COLOR_CAMERA_ID.to_string(),
-        DeviceConfig::new(COLOR_CAMERA_ID, "camera").set("path", "/dev/video2"),
-    );
-    config.devices_mut().insert(
-        QR_CAMERA_ID.to_string(),
-        DeviceConfig::new(QR_CAMERA_ID, "camera").set("path", "/dev/video2"),
-    );
-    config.devices_mut().insert(
-        CROSS_CAMERA_ID.to_string(),
-        DeviceConfig::new(CROSS_CAMERA_ID, "camera").set("path", "/dev/video2"),
+        CAMERA_ID.to_string(),
+        DeviceConfig::new(CAMERA_ID, "camera").set("path", "/dev/video2"),
     );
 }
 
@@ -86,7 +76,7 @@ fn insert_functions(config: &mut RuboConfig) {
     config.funcs_mut().insert(
         "color_detect".to_string(),
         FuncConfig::new("color_detect")
-            .set("device_id", COLOR_CAMERA_ID)
+            .set("device_id", CAMERA_ID)
             .set("debug_model", false)
             .set("loop_count", 5_i32)
             .set("radius_ratio", 0.4_f64)
@@ -96,14 +86,14 @@ fn insert_functions(config: &mut RuboConfig) {
     config.funcs_mut().insert(
         "qr_detect".to_string(),
         FuncConfig::new("qr_detect")
-            .set("device_id", QR_CAMERA_ID)
+            .set("device_id", CAMERA_ID)
             .set("debug_model", false)
             .set("loop_count", 30_i32),
     );
     config.funcs_mut().insert(
         "black_ring_detect".to_string(),
         FuncConfig::new("black_ring_detect")
-            .set("device_id", COLOR_CAMERA_ID)
+            .set("device_id", CAMERA_ID)
             .set("debug_model", false)
             .set("loop_count", 3_i32)
             .set("target_correction", default_target_correction())
@@ -116,7 +106,7 @@ fn insert_functions(config: &mut RuboConfig) {
     config.funcs_mut().insert(
         "cross".to_string(),
         FuncConfig::new("cross")
-            .set("device_id", CROSS_CAMERA_ID)
+            .set("device_id", CAMERA_ID)
             .set("debug_model", false)
             .set("loop_count", 3_i32)
             .set("target_correction", default_target_correction())
@@ -163,20 +153,14 @@ fn insert_sinks(config: &mut RuboConfig) {
 }
 
 fn insert_bindings(config: &mut RuboConfig) {
-    insert_uart_binding(
-        config,
-        "uart_color_detect",
-        "1",
-        COLOR_CAMERA_ID,
-        "color_detect",
-    );
-    insert_uart_binding(config, "uart_qr_detect", "2", QR_CAMERA_ID, "qr_detect");
-    insert_uart_binding(config, "uart_cross_detect", "3", CROSS_CAMERA_ID, "cross");
+    insert_uart_binding(config, "uart_color_detect", "1", CAMERA_ID, "color_detect");
+    insert_uart_binding(config, "uart_qr_detect", "2", CAMERA_ID, "qr_detect");
+    insert_uart_binding(config, "uart_cross_detect", "3", CAMERA_ID, "cross");
     insert_uart_binding(
         config,
         "uart_black_ring_detect",
         "4",
-        COLOR_CAMERA_ID,
+        CAMERA_ID,
         "black_ring_detect",
     );
     config.bindings_mut().insert(
@@ -260,6 +244,8 @@ mod tests {
     #[test]
     fn default_rubo_config_test() {
         let config = default_rubo_config();
+        assert_eq!(config.devices().len(), 1);
+        assert!(config.devices().contains_key(CAMERA_ID));
         assert_eq!(config.bindings().len(), 5);
         for id in [
             "uart_color_detect",
@@ -268,6 +254,7 @@ mod tests {
             "uart_black_ring_detect",
         ] {
             assert!(config.bindings()[id].debug_enabled());
+            assert_eq!(config.bindings()[id].devices(), &[CAMERA_ID.to_string()]);
         }
         let debug = &config.bindings()["debug"];
         assert_eq!(debug.source_ref().id(), "web");

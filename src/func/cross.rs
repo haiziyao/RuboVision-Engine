@@ -12,7 +12,7 @@ impl Function for CrossDetect {
     async fn call(&self, call: FunctionCall<'_>) -> Result<FuncResult, FunctionError> {
         let device_id = call
             .function_config()
-            .get_or("device_id", "cross_camera".to_string())?;
+            .get_or("device_id", "camera".to_string())?;
         let runtime_param = call
             .message()
             .payload_ref()
@@ -93,7 +93,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires Ubuntu, OpenCV and a configured camera"]
     async fn cross_test() {
-        let (config, camera) = crate::vision::test::load_camera("cross_camera")
+        let (config, camera) = crate::vision::test::load_camera("camera")
             .await
             .expect("load cross camera");
         let output = cross_output(camera, 0, &config.funcs()["cross"])

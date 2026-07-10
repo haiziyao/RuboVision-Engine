@@ -10,7 +10,7 @@ id = "web"
 
 [uart_black_ring_detect]
 debug = true
-devices = ["color_camera"]
+devices = ["camera"]
 function = "black_ring_detect"
 sinks = [
     "web",
@@ -23,7 +23,7 @@ id = "uart"
 
 [uart_color_detect]
 debug = true
-devices = ["color_camera"]
+devices = ["camera"]
 function = "color_detect"
 sinks = [
     "web",
@@ -36,7 +36,7 @@ id = "uart"
 
 [uart_cross_detect]
 debug = true
-devices = ["cross_camera"]
+devices = ["camera"]
 function = "cross"
 sinks = [
     "web",
@@ -49,7 +49,7 @@ id = "uart"
 
 [uart_qr_detect]
 debug = true
-devices = ["qr_camera"]
+devices = ["camera"]
 function = "qr_detect"
 sinks = [
     "web",

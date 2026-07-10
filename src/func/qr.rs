@@ -12,7 +12,7 @@ impl Function for QrDetect {
     async fn call(&self, call: FunctionCall<'_>) -> Result<FuncResult, FunctionError> {
         let device_id = call
             .function_config()
-            .get_or("device_id", "qr_camera".to_string())?;
+            .get_or("device_id", "camera".to_string())?;
         let camera = call.devices().get::<CameraDevice>(&device_id)?;
         run_qr_detect(camera, call.function_config()).await
     }
@@ -74,7 +74,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires Ubuntu, OpenCV and a configured camera"]
     async fn qr_detect_test() {
-        let (config, camera) = crate::vision::test::load_camera("qr_camera")
+        let (config, camera) = crate::vision::test::load_camera("camera")
             .await
             .expect("load qr camera");
         let output = qr_detect_output(camera, &config.funcs()["qr_detect"])

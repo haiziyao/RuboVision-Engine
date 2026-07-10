@@ -5,7 +5,7 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 
 [features]
-default = []
+default = ["opencv"]
 opencv = ["dep:opencv", "dep:quircs", "dep:base64"]
 hardware = ["dep:rppal"]
 
@@ -17,7 +17,7 @@ serde_json = "1"
 tokio = { version = "1", features = ["macros", "rt", "sync", "time"] }
 
 base64 = { version = "0.22", optional = true }
-opencv = { version = "0.75", optional = true }
+opencv = { version = "0.92", optional = true }
 quircs = { version = "0.10", optional = true }
 
 [target.'cfg(target_os = "linux")'.dependencies]

@@ -95,7 +95,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "requires Ubuntu, OpenCV and a configured camera"]
     async fn camera_test() {
-        let (_, camera) = crate::vision::test::load_camera("color_camera")
+        let (_, camera) = crate::vision::test::load_camera("camera")
             .await
             .expect("load camera");
         let frame = camera.frame().await.expect("read camera frame");

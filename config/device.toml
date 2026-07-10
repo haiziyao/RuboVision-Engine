@@ -1,11 +1,3 @@
-[color_camera]
-kind = "camera"
-path = "/dev/video2"
-
-[cross_camera]
-kind = "camera"
-path = "/dev/video2"
-
-[qr_camera]
+[camera]
 kind = "camera"
 path = "/dev/video2"

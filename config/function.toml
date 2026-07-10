@@ -1,7 +1,7 @@
 [black_ring_detect]
 black_threshold = 90
 debug_model = false
-device_id = "color_camera"
+device_id = "camera"
 loop_count = 3
 max_radius = 180.0
 min_circularity = 0.65
@@ -15,7 +15,7 @@ y = 0
 [color_detect]
 debug_model = false
 detect_area_access_rate = 0.8
-device_id = "color_camera"
+device_id = "camera"
 loop_count = 5
 radius_ratio = 0.4
 
@@ -79,7 +79,7 @@ black_threshold = 90
 center_tolerance = 14.0
 close_kernel_size = 5
 debug_model = false
-device_id = "cross_camera"
+device_id = "camera"
 dilate_iterations = 1
 dilate_kernel_size = 3
 loop_count = 3
@@ -167,5 +167,5 @@ message = "debug"
 
 [qr_detect]
 debug_model = false
-device_id = "qr_camera"
+device_id = "camera"
 loop_count = 30
