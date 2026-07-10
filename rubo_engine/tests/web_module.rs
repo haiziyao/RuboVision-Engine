@@ -30,6 +30,9 @@ fn web_index_html_contains_new_three_page_workstation() {
     assert!(html.contains("本次输出不包含图像"));
     assert!(html.contains(r#"id="clear-current""#));
     assert!(html.contains("clearCurrentDisplay"));
+    assert!(html.contains(r#"id="current-result-value""#));
+    assert!(html.contains("resultValue"));
+    assert!(html.contains("<th>Value</th>"));
     assert!(!html.contains("瑙嗚"));
     assert!(html.contains("findOutputImage"));
 }

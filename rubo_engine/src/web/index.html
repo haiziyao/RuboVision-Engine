@@ -425,6 +425,7 @@
                 <dt>Binding</dt><dd id="current-binding" class="mono">--</dd>
                 <dt>Function</dt><dd id="current-function" class="mono">--</dd>
                 <dt>Sink</dt><dd id="current-sinks" class="mono">--</dd>
+                <dt>Value</dt><dd id="current-result-value" class="result-value mono">--</dd>
                 <dt>返回值</dt><dd id="current-value" class="result-value mono">--</dd>
                 <dt>Sink 结果</dt><dd><ul id="current-sink-results" class="sink-list"><li>--</li></ul></dd>
               </dl>
@@ -488,8 +489,8 @@
             <div class="panel-header"><h2 class="panel-title">输出记录</h2><button id="history-refresh" class="button compact" type="button">刷新</button></div>
             <div class="table-wrap">
               <table>
-                <thead><tr><th>编号</th><th>状态</th><th>来源 / Binding</th><th>Function</th><th>耗时</th><th>时间</th></tr></thead>
-                <tbody id="history-table-body"><tr><td colspan="6"><div class="empty-state">选择条件后查询</div></td></tr></tbody>
+                <thead><tr><th>编号</th><th>状态</th><th>来源 / Binding</th><th>Function</th><th>Value</th><th>耗时</th><th>时间</th></tr></thead>
+                <tbody id="history-table-body"><tr><td colspan="7"><div class="empty-state">选择条件后查询</div></td></tr></tbody>
               </table>
             </div>
           </section>
@@ -730,6 +731,7 @@
         element("current-binding").textContent = "--";
         element("current-function").textContent = "--";
         element("current-sinks").textContent = "--";
+        element("current-result-value").textContent = "--";
         element("current-value").textContent = "--";
         element("current-sink-results").innerHTML = "<li>--</li>";
         setCurrentImage(null, false);
@@ -745,6 +747,7 @@
       element("current-binding").textContent = frame.route?.binding_id || "--";
       element("current-function").textContent = frame.route?.function_id || "--";
       element("current-sinks").textContent = (frame.route?.sink_ids || []).join(", ") || "--";
+      element("current-result-value").textContent = resultValue(frame);
       element("current-value").textContent = view.text;
       renderSinkResults(frame.sink_results || []);
       setCurrentImage(findOutputImage(frame), true);
@@ -817,13 +820,17 @@
       }));
     }
 
-    function outputRowHtml(frame) {
+    function outputRowHtml(frame, includeValue = false) {
       const view = outputView(frame);
+      const valueCell = includeValue
+        ? `<td class="cell-ellipsis mono" title="${escapeAttribute(resultValue(frame))}">${escapeHtml(resultValue(frame))}</td>`
+        : "";
       return `<tr data-output-id="${Number(frame.id)}">
         <td class="mono">#${Number(frame.id)}</td>
         <td><span class="state-badge ${view.isError ? "error" : ""}">${view.isError ? "错误" : "成功"}</span></td>
         <td class="cell-ellipsis mono" title="${escapeAttribute(`${frame.route?.source_id || "--"} / ${frame.route?.binding_id || "--"}`)}">${escapeHtml(frame.route?.source_id || "--")} / ${escapeHtml(frame.route?.binding_id || "--")}</td>
         <td class="mono">${escapeHtml(frame.route?.function_id || "--")}</td>
+        ${valueCell}
         <td>${Number(frame.timing?.duration_ms || 0)} ms</td>
         <td>${escapeHtml(formatTime(frame.created_at_ms))}</td>
       </tr>`;
@@ -906,10 +913,10 @@
     function renderHistory() {
       const target = element("history-table-body");
       if (!state.historyOutputs.length) {
-        target.innerHTML = '<tr><td colspan="6"><div class="empty-state">没有符合条件的输出</div></td></tr>';
+        target.innerHTML = '<tr><td colspan="7"><div class="empty-state">没有符合条件的输出</div></td></tr>';
         return;
       }
-      target.innerHTML = state.historyOutputs.map(outputRowHtml).join("");
+      target.innerHTML = state.historyOutputs.map(frame => outputRowHtml(frame, true)).join("");
       target.querySelectorAll("[data-output-id]").forEach(row => row.addEventListener("click", () => selectHistoryOutput(row.dataset.outputId).catch(handleError)));
     }
 
@@ -1431,6 +1438,12 @@
       }
       const value = frame?.state?.success?.value;
       return { isError: false, value, text: formatValue(value) };
+    }
+
+    function resultValue(frame) {
+      const result = frame?.state?.success?.value;
+      if (!result || typeof result !== "object" || Array.isArray(result)) return "--";
+      return Object.prototype.hasOwnProperty.call(result, "value") ? formatValue(result.value) : "--";
     }
 
     function routeText(frame) {
