@@ -1,0 +1,29 @@
+[package]
+name = "rubo_engine"
+version = "0.2.0"
+edition.workspace = true
+license.workspace = true
+description = "A pure Rust core runtime framework for source-device-function-sink pipelines."
+readme = "README.md"
+documentation = "https://docs.rs/rubo_engine"
+keywords = ["runtime", "pipeline", "debugger", "vision"]
+categories = ["asynchronous"]
+
+[dependencies]
+async-trait = "0.1"
+axum = "0.8"
+config = "0.15"
+futures = "0.3"
+inventory = "0.3"
+owo-colors = "4"
+rubo_engine_macros = { version = "0.1.0", path = "../rubo_engine_macros" }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml_bw = "2.5"
+tokio = { version = "1", features = ["sync", "rt", "macros", "net", "time"] }
+toml = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "ansi"] }
+
+[dev-dependencies]
+tempfile = "3"

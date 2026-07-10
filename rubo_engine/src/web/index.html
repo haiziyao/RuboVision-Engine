@@ -1,0 +1,1567 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <link rel="icon" href="data:,">
+  <title>RuboEngine 运行中心</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+      font-size: 14px;
+      letter-spacing: 0;
+      --ink: #27322f;
+      --muted: #6d7974;
+      --faint: #8b9691;
+      --canvas: #eef1ef;
+      --surface: #ffffff;
+      --surface-soft: #f7f9f8;
+      --line: #d4dcd8;
+      --line-strong: #bdc9c3;
+      --header: #263d39;
+      --header-soft: #35524c;
+      --accent: #e8794b;
+      --accent-dark: #c95e34;
+      --success: #1c765e;
+      --success-soft: #e1f1eb;
+      --warning: #8a641b;
+      --warning-soft: #fbf1d8;
+      --danger: #a3463d;
+      --danger-soft: #fae8e5;
+      --info: #286b82;
+      --info-soft: #e4f0f4;
+    }
+
+    * { box-sizing: border-box; letter-spacing: 0; }
+    html { min-width: 320px; background: var(--canvas); }
+    body { min-height: 100vh; margin: 0; background: var(--canvas); color: var(--ink); }
+    button, input, select, textarea { font: inherit; letter-spacing: 0; }
+    button { cursor: pointer; }
+    button:disabled { cursor: not-allowed; opacity: .5; }
+    button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+    code, pre, textarea, .mono { font-family: Consolas, "SFMono-Regular", monospace; }
+    .hidden { display: none !important; }
+
+    .app-shell {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 168px minmax(0, 1fr);
+      grid-template-rows: 58px minmax(0, 1fr);
+    }
+
+    .app-header {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 18px;
+      background: var(--header);
+      color: #f8faf9;
+      border-bottom: 3px solid var(--accent);
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: inherit;
+      text-decoration: none;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .brand-mark { width: 27px; height: 27px; display: grid; place-items: center; background: var(--accent); color: #fff; font-size: 15px; }
+    .brand-name { font-size: 16px; }
+    .header-right { min-width: 0; display: flex; align-items: center; justify-content: flex-end; gap: 10px; }
+    .runtime-status { min-width: 0; display: flex; align-items: center; gap: 7px; color: #dce7e3; font-size: 12px; }
+    .runtime-status-text { max-width: 310px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .status-dot { width: 8px; height: 8px; flex: 0 0 auto; border-radius: 50%; background: #9aa8a2; }
+    .runtime-status.is-running .status-dot { background: #55bd94; }
+    .runtime-status.is-warning .status-dot { background: #e1b44b; }
+    .runtime-status.is-error .status-dot { background: #e07a70; }
+
+    .runtime-controls { display: flex; align-items: center; gap: 6px; }
+    .icon-button {
+      width: 32px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 1px solid rgba(255,255,255,.28);
+      border-radius: 2px;
+      background: transparent;
+      color: #fff;
+      font-size: 13px;
+    }
+    .icon-button:hover { background: var(--header-soft); }
+    .icon-button.accent { border-color: var(--accent); background: var(--accent); }
+    .icon-button.accent:hover { background: var(--accent-dark); }
+
+    .app-nav {
+      grid-column: 1;
+      grid-row: 2;
+      padding: 17px 10px;
+      background: var(--surface);
+      border-right: 1px solid var(--line);
+    }
+    .nav-caption { display: block; margin: 0 10px 8px; color: var(--faint); font-size: 11px; }
+    .nav-button {
+      width: 100%;
+      min-height: 40px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      margin: 0 0 4px;
+      padding: 0 10px;
+      border: 0;
+      border-left: 3px solid transparent;
+      border-radius: 2px;
+      background: transparent;
+      color: #58645f;
+      text-align: left;
+    }
+    .nav-button:hover { background: var(--surface-soft); }
+    .nav-button.active { border-left-color: var(--accent); background: var(--success-soft); color: var(--success); font-weight: 800; }
+    .nav-icon { width: 16px; flex: 0 0 16px; text-align: center; font-weight: 700; }
+
+    .workspace { grid-column: 2; grid-row: 2; min-width: 0; padding: 18px; }
+    .page-view { display: none; width: min(1500px, 100%); margin: 0 auto; }
+    .page-view.active { display: block; }
+    .page-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 14px; }
+    .page-heading h1 { margin: 0 0 3px; font-size: 22px; line-height: 1.25; }
+    .page-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+    .page-meta { color: var(--muted); font-size: 12px; text-align: right; }
+
+    .button {
+      min-height: 34px;
+      padding: 0 12px;
+      border: 1px solid var(--line-strong);
+      border-radius: 2px;
+      background: var(--surface);
+      color: #38443f;
+      font-weight: 700;
+    }
+    .button:hover { border-color: #8fa098; background: var(--surface-soft); }
+    .button.primary { border-color: var(--header); background: var(--header); color: #fff; }
+    .button.primary:hover { background: var(--header-soft); }
+    .button.accent { border-color: var(--accent); background: var(--accent); color: #fff; }
+    .button.accent:hover { background: var(--accent-dark); }
+    .button.danger { border-color: #dab4ae; color: var(--danger); }
+    .button.danger:hover { border-color: var(--danger); background: var(--danger-soft); }
+    .button.compact { min-height: 29px; padding: 0 9px; font-size: 12px; }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 1px;
+      margin-bottom: 12px;
+      border: 1px solid var(--line);
+      background: var(--line);
+    }
+    .metric { min-width: 0; padding: 12px 14px; background: var(--surface); }
+    .metric-label { color: var(--muted); font-size: 11px; }
+    .metric-value { min-height: 26px; margin-top: 5px; color: var(--header); font-size: 19px; font-weight: 800; overflow-wrap: anywhere; }
+
+    .overview-grid { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(290px, .72fr); gap: 12px; align-items: start; }
+    .side-stack { display: grid; gap: 12px; align-content: start; }
+    .panel { min-width: 0; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+    .panel-header { min-height: 44px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--line); }
+    .panel-title { min-width: 0; margin: 0; font-size: 14px; }
+    .panel-actions { display: flex; align-items: center; justify-content: flex-end; gap: 7px; }
+    .panel-note { color: var(--muted); font-size: 11px; white-space: nowrap; }
+
+    .image-stage { min-height: 320px; aspect-ratio: 16 / 9; position: relative; display: grid; place-items: center; overflow: hidden; background: #e8edeb; }
+    .image-grid { position: absolute; inset: 0; background: #e8edeb; }
+    .image-empty { position: relative; z-index: 1; max-width: 300px; padding: 24px; color: var(--muted); text-align: center; line-height: 1.65; }
+    .image-empty-mark { display: block; margin-bottom: 7px; color: var(--faint); font: 700 12px Consolas, monospace; }
+    .image-preview { position: relative; z-index: 2; width: 100%; height: 100%; display: none; object-fit: contain; background: #edf0ee; }
+    .image-preview.active { display: block; }
+    .result-strip { min-height: 48px; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 9px 12px; border-top: 1px solid var(--line); }
+    .route-line { overflow: hidden; color: #53605a; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+    .state-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 56px; min-height: 25px; padding: 3px 8px; border: 1px solid #afd4c5; border-radius: 2px; background: var(--success-soft); color: var(--success); font-size: 11px; font-weight: 800; }
+    .state-badge.error { border-color: #e3b5ae; background: var(--danger-soft); color: var(--danger); }
+    .state-badge.waiting { border-color: #dfce9f; background: var(--warning-soft); color: var(--warning); }
+
+    .detail-list { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 9px 12px; margin: 0; padding: 13px; }
+    .detail-list dt { color: var(--muted); font-size: 11px; }
+    .detail-list dd { min-width: 0; margin: 0; overflow-wrap: anywhere; font-size: 12px; }
+    .result-value { max-height: 150px; overflow: auto; white-space: pre-wrap; }
+    .sink-list { margin: 0; padding: 0; list-style: none; }
+    .sink-list li + li { margin-top: 3px; }
+
+    .debug-body { padding: 12px; }
+    .field-label { display: block; margin: 0 0 5px; color: var(--muted); font-size: 11px; font-weight: 700; }
+    .control { width: 100%; min-height: 34px; padding: 7px 9px; border: 1px solid var(--line-strong); border-radius: 2px; background: #fff; color: var(--ink); }
+    textarea.control { min-height: 92px; resize: vertical; line-height: 1.5; }
+    .debug-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 7px; }
+    .debug-details { margin-top: 10px; border-top: 1px solid var(--line); }
+    .debug-details summary { padding: 9px 0 0; color: var(--muted); cursor: pointer; font-size: 12px; }
+    .debug-options { display: grid; gap: 9px; padding-top: 10px; }
+    .inline-message { min-height: 18px; margin-top: 8px; color: var(--muted); font-size: 11px; line-height: 1.5; }
+    .inline-message.error { color: var(--danger); }
+    .inline-message.success { color: var(--success); }
+
+    .section-panel { margin-top: 12px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+    .chain-list, .recent-list { min-height: 50px; }
+    .chain-row { min-height: 46px; display: grid; grid-template-columns: minmax(130px, .5fr) minmax(0, 1.6fr) auto; align-items: center; gap: 14px; padding: 8px 12px; border-top: 1px solid var(--line); }
+    .chain-row:first-child { border-top: 0; }
+    .chain-name { overflow: hidden; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .chain-flow { min-width: 0; display: flex; align-items: center; gap: 5px; overflow: hidden; color: #596660; white-space: nowrap; }
+    .chain-node { max-width: 190px; padding: 4px 7px; overflow: hidden; background: #edf2ef; font-size: 11px; text-overflow: ellipsis; }
+    .chain-arrow { color: var(--faint); }
+    .availability { color: var(--success); font-size: 11px; font-weight: 700; }
+
+    .table-wrap { overflow: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 9px 10px; border-bottom: 1px solid #e3e8e5; text-align: left; vertical-align: middle; }
+    th { background: var(--surface-soft); color: var(--muted); font-size: 11px; font-weight: 700; white-space: nowrap; }
+    td { font-size: 12px; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr[data-output-id] { cursor: pointer; }
+    tbody tr[data-output-id]:hover td, tbody tr.selected td { background: #edf5f2; }
+    .cell-ellipsis { max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .empty-state { min-height: 110px; display: grid; place-items: center; padding: 20px; color: var(--muted); text-align: center; }
+
+    .filters { display: grid; grid-template-columns: repeat(5, minmax(110px, 1fr)) 100px auto; gap: 7px; margin-bottom: 12px; }
+    .history-layout { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(310px, .72fr); gap: 12px; align-items: start; }
+    .history-table-panel { min-width: 0; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+    .history-detail { min-width: 0; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+    .history-image { min-height: 170px; max-height: 310px; display: grid; place-items: center; overflow: hidden; background: #e8edeb; color: var(--muted); }
+    .history-image img { width: 100%; height: 100%; max-height: 310px; object-fit: contain; }
+    .history-detail-body { padding: 12px; }
+    .detail-section + .detail-section { margin-top: 12px; padding-top: 11px; border-top: 1px solid var(--line); }
+    .detail-section-title { margin: 0 0 6px; color: var(--muted); font-size: 11px; }
+    .code-block { max-height: 220px; margin: 0; padding: 9px; overflow: auto; background: #f2f5f3; color: #48564f; font-size: 11px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+    .config-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .config-tabs { min-width: 0; display: flex; align-items: center; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line-strong); }
+    .config-tab { min-height: 38px; padding: 0 13px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #5d6964; white-space: nowrap; }
+    .config-tab.active { border-bottom-color: var(--accent); color: var(--success); font-weight: 800; }
+    .config-actions { display: flex; gap: 7px; }
+    .config-layout { min-height: 470px; display: grid; grid-template-columns: 230px minmax(0, 1fr); border: 1px solid var(--line); border-radius: 3px; background: var(--surface); }
+    .config-list-panel { padding: 10px; border-right: 1px solid var(--line); }
+    .config-list { max-height: 410px; margin-top: 8px; overflow: auto; }
+    .config-item { width: 100%; min-height: 37px; display: block; padding: 7px 9px; border: 0; border-left: 3px solid transparent; border-radius: 2px; background: transparent; color: #515e58; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .config-item:hover { background: var(--surface-soft); }
+    .config-item.active { border-left-color: var(--accent); background: var(--success-soft); color: var(--success); font-weight: 800; }
+    .config-editor-panel { min-width: 0; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; }
+    .config-editor-header { min-height: 52px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 13px; border-bottom: 1px solid var(--line); }
+    .config-editor-heading { min-width: 0; }
+    .config-editor-title { min-width: 0; overflow: hidden; font-weight: 800; text-overflow: ellipsis; white-space: nowrap; }
+    .dirty-mark { color: var(--warning); font-size: 11px; }
+    .config-mode-actions { display: flex; gap: 7px; flex: 0 0 auto; }
+    .button.mode-active { border-color: var(--success); background: var(--success-soft); color: var(--success); }
+    .config-editor-body { min-height: 390px; overflow: auto; background: #fbfcfb; }
+    .config-field-list { min-width: 0; padding: 10px 12px 16px; }
+    .config-tree { border-top: 1px solid var(--line); background: var(--surface); }
+    .config-tree-node { min-width: 0; border-bottom: 1px solid var(--line); }
+    .config-tree-row { min-height: 48px; display: grid; grid-template-columns: minmax(150px, .32fr) minmax(180px, 1fr) auto; align-items: center; gap: 12px; padding: 7px 10px; }
+    .config-tree-key { min-width: 0; color: #40504a; overflow-wrap: anywhere; }
+    .config-tree-key strong { display: block; font-size: 12px; }
+    .config-tree-type { display: block; margin-top: 2px; color: var(--faint); font-size: 10px; font-weight: 400; }
+    .config-tree-value { min-width: 0; }
+    .config-tree-control { width: 100%; min-height: 34px; background: #fff; }
+    .config-tree-control[readonly] { border-color: transparent; background: transparent; color: var(--muted); }
+    .config-tree-control[aria-invalid="true"] { border-color: var(--danger); background: var(--danger-soft); }
+    .config-tree-actions { min-width: 30px; display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+    .config-tree-icon { width: 29px; height: 29px; display: grid; place-items: center; padding: 0; border: 1px solid transparent; border-radius: 2px; background: transparent; color: var(--info); font-size: 18px; line-height: 1; }
+    .config-tree-icon:hover { border-color: var(--line-strong); background: var(--info-soft); }
+    .config-tree-icon.remove { color: var(--danger); }
+    .config-tree-icon.remove:hover { background: var(--danger-soft); }
+    details.config-tree-node > summary { list-style: none; cursor: pointer; }
+    details.config-tree-node > summary::-webkit-details-marker { display: none; }
+    .config-tree-disclosure { width: 14px; flex: 0 0 14px; color: var(--muted); font-size: 16px; transform: rotate(0deg); transition: transform .12s ease; }
+    details[open] > summary .config-tree-disclosure { transform: rotate(90deg); }
+    .config-tree-group-key { display: flex; align-items: center; gap: 5px; }
+    .config-tree-group-meta { color: var(--muted); font-size: 11px; }
+    .config-tree-children { margin-left: 22px; border-left: 2px solid #dfe8e4; }
+    .config-tree-children > .config-tree-node:last-child { border-bottom: 0; }
+    .config-tree-empty { min-height: 42px; display: flex; align-items: center; padding: 8px 12px; color: var(--faint); font-size: 11px; }
+    .config-toggle { display: inline-flex; align-items: center; gap: 9px; color: #4d5b55; font-size: 12px; cursor: pointer; }
+    .config-toggle input { position: absolute; opacity: 0; pointer-events: none; }
+    .config-toggle-track { width: 34px; height: 19px; position: relative; flex: 0 0 auto; border: 1px solid var(--line-strong); border-radius: 10px; background: #dce2df; transition: background .15s ease; }
+    .config-toggle-track::after { content: ""; width: 13px; height: 13px; position: absolute; top: 2px; left: 2px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(39,50,47,.3); transition: transform .15s ease; }
+    .config-toggle input:checked + .config-toggle-track { border-color: var(--success); background: var(--success); }
+    .config-toggle input:checked + .config-toggle-track::after { transform: translateX(15px); }
+    .config-toggle input:focus-visible + .config-toggle-track { outline: 2px solid var(--info); outline-offset: 2px; }
+    .config-editor-wrap { padding: 12px; }
+    #config-editor { width: 100%; min-height: 360px; height: 100%; resize: vertical; line-height: 1.55; tab-size: 2; }
+    .config-editor-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-top: 1px solid var(--line); background: var(--surface-soft); }
+    .config-message { min-width: 0; color: var(--muted); font-size: 11px; overflow-wrap: anywhere; }
+    .editor-buttons { display: flex; gap: 7px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .toast-region { position: fixed; z-index: 20; right: 16px; bottom: 16px; width: min(360px, calc(100% - 32px)); display: grid; gap: 8px; pointer-events: none; }
+    .toast { padding: 11px 12px; border: 1px solid var(--line-strong); border-left: 4px solid var(--info); border-radius: 2px; background: #fff; box-shadow: 0 12px 28px rgba(39,50,47,.16); color: #44514b; font-size: 12px; line-height: 1.5; }
+    .toast.success { border-left-color: var(--success); }
+    .toast.warning { border-left-color: var(--warning); }
+    .toast.error { border-left-color: var(--danger); }
+
+    @media (max-width: 1080px) {
+      .filters { grid-template-columns: repeat(3, minmax(120px, 1fr)); }
+      .history-layout { grid-template-columns: minmax(0, 1.15fr) minmax(280px, .85fr); }
+    }
+
+    @media (max-width: 840px) {
+      .app-shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: 58px auto minmax(0, 1fr); }
+      .app-header { grid-column: 1; grid-row: 1; }
+      .app-nav { grid-column: 1; grid-row: 2; display: flex; gap: 4px; padding: 7px 9px; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+      .nav-caption { display: none; }
+      .nav-button { width: auto; min-width: max-content; margin: 0; padding: 0 12px; }
+      .workspace { grid-column: 1; grid-row: 3; padding: 14px; }
+      .overview-grid, .history-layout { grid-template-columns: minmax(0, 1fr); }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .image-stage { min-height: 260px; }
+      .config-layout { grid-template-columns: 180px minmax(0, 1fr); }
+      .runtime-status-text { max-width: 180px; }
+    }
+
+    @media (max-width: 590px) {
+      .app-header { gap: 8px; padding: 0 10px; }
+      .brand-suffix { display: none; }
+      .runtime-status-text { max-width: 84px; }
+      .workspace { padding: 10px; }
+      .page-heading { align-items: flex-start; }
+      .page-meta { display: none; }
+      .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .metric { padding: 10px; }
+      .metric-value { font-size: 17px; }
+      .image-stage { min-height: 210px; }
+      .panel-header { align-items: flex-start; }
+      .panel-actions { flex-wrap: wrap; }
+      .chain-row { grid-template-columns: minmax(0, 1fr) auto; }
+      .chain-flow { grid-column: 1 / -1; grid-row: 2; overflow-x: auto; }
+      .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters .button { width: 100%; }
+      .config-toolbar { align-items: stretch; flex-direction: column; }
+      .config-actions { justify-content: flex-end; }
+      .config-layout { grid-template-columns: minmax(0, 1fr); }
+      .config-list-panel { border-right: 0; border-bottom: 1px solid var(--line); }
+      .config-list { max-height: 150px; }
+      .config-editor-header { align-items: stretch; flex-direction: column; }
+      .config-mode-actions { justify-content: flex-end; }
+      .config-field-list { padding: 8px; }
+      .config-tree-row { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 10px; }
+      .config-tree-value { grid-column: 1 / -1; }
+      .config-tree-group-key { grid-column: 1; grid-row: 1; }
+      .config-tree-group-meta { grid-column: 1; grid-row: 2; margin-left: 19px; }
+      .config-tree-group-row .config-tree-actions { grid-column: 2; grid-row: 1 / span 2; }
+      .config-tree-children { margin-left: 12px; }
+      .config-editor-actions { align-items: stretch; flex-direction: column; }
+      .editor-buttons { justify-content: flex-start; }
+      th, td { padding: 8px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="app-header">
+      <a class="brand" href="#overview" aria-label="RuboEngine 执行总览">
+        <span class="brand-mark" aria-hidden="true">R</span>
+        <span class="brand-name"><span>RuboEngine</span> <span class="brand-suffix">运行中心</span></span>
+      </a>
+      <div class="header-right">
+        <div id="runtime-status" class="runtime-status is-warning" role="status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="runtime-status-text" class="runtime-status-text">正在连接运行时</span>
+        </div>
+        <div class="runtime-controls" aria-label="运行时控制">
+          <button id="runtime-start" class="icon-button" type="button" title="启动运行时" aria-label="启动运行时">▶</button>
+          <button id="runtime-stop" class="icon-button" type="button" title="停止运行时" aria-label="停止运行时">■</button>
+          <button id="runtime-restart" class="icon-button accent" type="button" title="重启运行时" aria-label="重启运行时">↻</button>
+          <button id="stream-reconnect" class="icon-button hidden" type="button" title="重新连接实时通道" aria-label="重新连接实时通道">⟳</button>
+        </div>
+      </div>
+    </header>
+
+    <nav class="app-nav" aria-label="主要页面">
+      <span class="nav-caption">工作区</span>
+      <button class="nav-button active" type="button" data-page="overview"><span class="nav-icon" aria-hidden="true">▦</span>执行总览</button>
+      <button class="nav-button" type="button" data-page="history"><span class="nav-icon" aria-hidden="true">☷</span>历史信息</button>
+      <button class="nav-button" type="button" data-page="config"><span class="nav-icon" aria-hidden="true">⚙</span>配置管理</button>
+    </nav>
+
+    <main class="workspace">
+      <section id="page-overview" class="page-view active" aria-labelledby="overview-title">
+        <div class="page-heading">
+          <div><h1 id="overview-title">执行总览</h1><p>当前输出、调试入口与运行链路</p></div>
+          <div id="overview-updated" class="page-meta">等待运行数据</div>
+        </div>
+
+        <div class="metrics" aria-label="运行摘要">
+          <div class="metric"><div class="metric-label">累计输出</div><div id="metric-output-count" class="metric-value">--</div></div>
+          <div class="metric"><div class="metric-label">成功执行</div><div id="metric-success-count" class="metric-value">--</div></div>
+          <div class="metric"><div class="metric-label">近期平均耗时</div><div id="metric-average-duration" class="metric-value">--</div></div>
+          <div class="metric"><div class="metric-label">异常输出</div><div id="metric-error-count" class="metric-value">--</div></div>
+        </div>
+
+        <div class="overview-grid">
+          <article class="panel">
+            <div class="panel-header">
+              <h2 class="panel-title">最新执行结果</h2>
+              <div class="panel-actions">
+                <span id="current-frame-time" class="panel-note">等待输出</span>
+                <button id="clear-current" class="button compact danger" type="button" disabled>清空当前显示</button>
+              </div>
+            </div>
+            <div class="image-stage">
+              <div class="image-grid" aria-hidden="true"></div>
+              <div id="current-image-empty" class="image-empty"><span class="image-empty-mark">WAITING FOR OUTPUT</span>等待下一条执行结果</div>
+              <img id="current-image" class="image-preview" alt="最新执行结果图像">
+            </div>
+            <div class="result-strip">
+              <div id="current-route" class="route-line mono">当前没有展示中的结果</div>
+              <span id="current-state" class="state-badge waiting">等待</span>
+            </div>
+          </article>
+
+          <aside class="side-stack">
+            <section class="panel">
+              <div class="panel-header"><h2 class="panel-title">本次执行</h2><span id="current-duration" class="panel-note">--</span></div>
+              <dl class="detail-list">
+                <dt>来源</dt><dd id="current-source" class="mono">--</dd>
+                <dt>Binding</dt><dd id="current-binding" class="mono">--</dd>
+                <dt>Function</dt><dd id="current-function" class="mono">--</dd>
+                <dt>Sink</dt><dd id="current-sinks" class="mono">--</dd>
+                <dt>返回值</dt><dd id="current-value" class="result-value mono">--</dd>
+                <dt>Sink 结果</dt><dd><ul id="current-sink-results" class="sink-list"><li>--</li></ul></dd>
+              </dl>
+            </section>
+
+            <section class="panel">
+              <div class="panel-header"><h2 class="panel-title">调试触发</h2><span id="debug-count" class="panel-note">--</span></div>
+              <div class="debug-body">
+                <label class="field-label" for="debug-binding">调试链路</label>
+                <div class="debug-row">
+                  <select id="debug-binding" class="control"><option value="">正在加载</option></select>
+                  <button id="debug-trigger" class="button accent" type="button" disabled title="触发所选链路" aria-label="触发所选链路">▶</button>
+                </div>
+                <details class="debug-details">
+                  <summary>触发参数</summary>
+                  <div class="debug-options">
+                    <div><label class="field-label" for="debug-description">说明</label><input id="debug-description" class="control" value="web debug trigger"></div>
+                    <div><label class="field-label" for="debug-payload">Payload JSON</label><textarea id="debug-payload" class="control" spellcheck="false">{}</textarea></div>
+                  </div>
+                </details>
+                <div id="debug-message" class="inline-message" role="status"></div>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <section class="section-panel">
+          <div class="panel-header"><h2 class="panel-title">运行链路</h2><span id="chain-count" class="panel-note">--</span></div>
+          <div id="chain-list" class="chain-list"><div class="empty-state">正在加载链路</div></div>
+        </section>
+
+        <section class="section-panel">
+          <div class="panel-header"><h2 class="panel-title">最近执行</h2><button id="recent-refresh" class="button compact" type="button">刷新</button></div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>编号</th><th>状态</th><th>来源 / Binding</th><th>Function</th><th>耗时</th><th>时间</th></tr></thead>
+              <tbody id="recent-table-body"><tr><td colspan="6"><div class="empty-state">正在加载最近执行</div></td></tr></tbody>
+            </table>
+          </div>
+        </section>
+      </section>
+
+      <section id="page-history" class="page-view" aria-labelledby="history-title">
+        <div class="page-heading">
+          <div><h1 id="history-title">历史信息</h1><p>筛选输出并检查完整执行上下文</p></div>
+          <div id="history-count" class="page-meta">尚未查询</div>
+        </div>
+
+        <form id="history-filter" class="filters">
+          <input id="filter-source" class="control" name="source" placeholder="Source ID">
+          <input id="filter-binding" class="control" name="binding" placeholder="Binding ID">
+          <input id="filter-function" class="control" name="function" placeholder="Function ID">
+          <input id="filter-sink" class="control" name="sink" placeholder="Sink ID">
+          <select id="filter-state" class="control" name="state"><option value="">全部状态</option><option value="success">成功</option><option value="error">错误</option></select>
+          <select id="filter-limit" class="control" name="limit"><option value="20">20 条</option><option value="50">50 条</option><option value="100" selected>100 条</option><option value="200">200 条</option></select>
+          <button class="button primary" type="submit">查询</button>
+        </form>
+
+        <div class="history-layout">
+          <section class="history-table-panel">
+            <div class="panel-header"><h2 class="panel-title">输出记录</h2><button id="history-refresh" class="button compact" type="button">刷新</button></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>编号</th><th>状态</th><th>来源 / Binding</th><th>Function</th><th>耗时</th><th>时间</th></tr></thead>
+                <tbody id="history-table-body"><tr><td colspan="6"><div class="empty-state">选择条件后查询</div></td></tr></tbody>
+              </table>
+            </div>
+          </section>
+
+          <aside class="history-detail">
+            <div class="panel-header"><h2 id="history-detail-title" class="panel-title">输出详情</h2><span id="history-detail-state" class="state-badge waiting">未选择</span></div>
+            <div id="history-detail-image" class="history-image">选择一条输出查看详情</div>
+            <div id="history-detail-body" class="history-detail-body">
+              <div class="empty-state">尚未选择输出</div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <section id="page-config" class="page-view" aria-labelledby="config-title">
+        <div class="page-heading">
+          <div><h1 id="config-title">配置管理</h1><p>内存修改、配置校验与文件保存</p></div>
+          <div id="config-validity" class="page-meta">尚未校验</div>
+        </div>
+
+        <div class="config-toolbar">
+          <div id="config-tabs" class="config-tabs" role="tablist" aria-label="配置模块"></div>
+          <div class="config-actions">
+            <button id="config-refresh" class="button compact" type="button">刷新</button>
+            <button id="config-validate" class="button compact" type="button">校验配置</button>
+            <button id="config-save" class="button compact accent" type="button">保存到文件</button>
+          </div>
+        </div>
+
+        <div class="config-layout">
+          <aside class="config-list-panel">
+            <label class="field-label" for="config-search">配置实例</label>
+            <input id="config-search" class="control" placeholder="搜索 ID">
+            <div id="config-list" class="config-list"><div class="empty-state">正在加载配置</div></div>
+          </aside>
+
+          <section class="config-editor-panel">
+            <div class="config-editor-header">
+              <div class="config-editor-heading"><div id="config-editor-title" class="config-editor-title">未选择配置</div><span id="config-dirty" class="dirty-mark"></span></div>
+              <div class="config-mode-actions">
+                <button id="config-json-toggle" class="button compact" type="button" disabled>完整 JSON</button>
+              </div>
+            </div>
+            <div class="config-editor-body">
+              <div id="config-field-list" class="config-field-list"><div class="empty-state">未选择配置</div></div>
+              <div id="config-json-wrap" class="config-editor-wrap hidden"><textarea id="config-editor" class="control" spellcheck="false" disabled>{}</textarea></div>
+            </div>
+            <div class="config-editor-actions">
+              <div id="config-message" class="config-message" role="status">选择一个配置实例</div>
+              <div class="editor-buttons">
+                <button id="config-discard" class="button" type="button" disabled>放弃修改</button>
+                <button id="config-apply" class="button primary" type="button" disabled>应用到内存</button>
+              </div>
+            </div>
+          </section>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast-region" class="toast-region" aria-live="polite" aria-atomic="true"></div>
+
+  <script>
+    const DEFAULT_ROUTES = {
+      interface: "/api/interface",
+      health: "/api/health",
+      runtime_summary: "/api/runtime/summary",
+      runtime_chain: "/api/runtime/chain",
+      runtime_outputs_latest: "/api/runtime/outputs/latest",
+      runtime_events: "/api/runtime/events",
+      runtime_start: "/api/runtime/start",
+      runtime_stop: "/api/runtime/stop",
+      runtime_restart: "/api/runtime/restart",
+      runtime_control_status: "/api/runtime/control/status",
+      outputs: "/api/outputs",
+      outputs_latest: "/api/outputs/latest",
+      output_detail: "/api/outputs/{id}",
+      config: "/api/config",
+      config_sources: "/api/config/sources",
+      config_devices: "/api/config/devices",
+      config_functions: "/api/config/functions",
+      config_sinks: "/api/config/sinks",
+      config_bindings: "/api/config/bindings",
+      config_validate: "/api/config/validate",
+      config_save: "/api/config/save",
+      debug_bindings: "/api/debug/bindings",
+      debug_trigger: "/api/debug/trigger"
+    };
+
+    const CONFIG_MODULES = {
+      sources: { label: "Source", route: "config_sources" },
+      devices: { label: "Device", route: "config_devices" },
+      functions: { label: "Function", route: "config_functions" },
+      sinks: { label: "Sink", route: "config_sinks" },
+      bindings: { label: "Binding", route: "config_bindings" }
+    };
+
+    const state = {
+      routes: { ...DEFAULT_ROUTES },
+      activePage: "overview",
+      summary: null,
+      chains: [],
+      latestOutputs: [],
+      currentFrame: null,
+      currentCleared: false,
+      historyOutputs: [],
+      selectedHistoryId: null,
+      debugBindings: [],
+      activeConfigModule: "sources",
+      configRecords: {},
+      selectedConfigId: null,
+      configDirty: false,
+      configEditMode: "fields",
+      configDraft: null,
+      eventSource: null
+    };
+
+    function element(id) {
+      return document.getElementById(id);
+    }
+
+    async function requestJson(path, options = {}) {
+      const response = await fetch(path, options);
+      let payload;
+      try {
+        payload = await response.json();
+      } catch (_) {
+        throw new Error(`HTTP ${response.status}: 响应不是有效 JSON`);
+      }
+      if (!response.ok || !payload.ok) {
+        throw new Error(payload.error?.message || `HTTP ${response.status}`);
+      }
+      return payload.data;
+    }
+
+    async function loadInterface() {
+      const data = await requestJson(DEFAULT_ROUTES.interface);
+      for (const route of data?.routes || []) {
+        if (route?.name && route?.path) state.routes[route.name] = route.path;
+      }
+    }
+
+    function routeWithId(routeName, id) {
+      const path = state.routes[routeName] || DEFAULT_ROUTES[routeName];
+      if (path.includes("{id}")) return path.replace("{id}", encodeURIComponent(id));
+      return `${path}/${encodeURIComponent(id)}`;
+    }
+
+    function setRuntimeStatus(text, kind = "warning") {
+      const target = element("runtime-status");
+      target.className = `runtime-status is-${kind}`;
+      element("runtime-status-text").textContent = text;
+    }
+
+    function showNotice(message, kind = "info") {
+      const toast = document.createElement("div");
+      toast.className = `toast ${kind}`;
+      toast.textContent = message;
+      element("toast-region").appendChild(toast);
+      window.setTimeout(() => toast.remove(), 4200);
+    }
+
+    function showPage(page) {
+      if (!["overview", "history", "config"].includes(page)) page = "overview";
+      state.activePage = page;
+      document.querySelectorAll("[data-page]").forEach(button => button.classList.toggle("active", button.dataset.page === page));
+      document.querySelectorAll(".page-view").forEach(view => view.classList.toggle("active", view.id === `page-${page}`));
+      if (window.location.hash !== `#${page}`) history.replaceState(null, "", `#${page}`);
+      if (page === "history" && !state.historyOutputs.length) loadHistory().catch(handleError);
+      if (page === "config" && !Object.keys(state.configRecords).length) loadConfigModule().catch(handleError);
+    }
+
+    async function loadOverview() {
+      const [summary, chains, latest] = await Promise.all([
+        requestJson(state.routes.runtime_summary),
+        requestJson(state.routes.runtime_chain),
+        requestJson(state.routes.runtime_outputs_latest)
+      ]);
+      state.summary = summary;
+      state.chains = chains || [];
+      state.latestOutputs = latest || [];
+      if (!state.currentCleared) state.currentFrame = state.latestOutputs[0] || null;
+      renderSummary();
+      renderCurrentFrame();
+      renderChains();
+      renderRecent();
+      element("overview-updated").textContent = `更新于 ${formatTime(Date.now())}`;
+    }
+
+    async function loadSummary() {
+      state.summary = await requestJson(state.routes.runtime_summary);
+      renderSummary();
+    }
+
+    async function loadLatestOutputs(preserveCleared = true) {
+      state.latestOutputs = await requestJson(state.routes.runtime_outputs_latest) || [];
+      if (!(preserveCleared && state.currentCleared)) state.currentFrame = state.latestOutputs[0] || null;
+      renderCurrentFrame();
+      renderRecent();
+    }
+
+    async function loadRuntimeControlStatus() {
+      const status = await requestJson(state.routes.runtime_control_status);
+      setRuntimeStatus(status.running ? "运行时已启动" : "运行时已停止", status.running ? "running" : "warning");
+    }
+
+    function renderSummary() {
+      const summary = state.summary || {};
+      const outputCount = Number(summary.output_count || 0);
+      const errorCount = Number(summary.error_count || 0);
+      const durationFrames = state.latestOutputs.filter(frame => Number.isFinite(Number(frame?.timing?.duration_ms)));
+      const average = durationFrames.length
+        ? Math.round(durationFrames.reduce((total, frame) => total + Number(frame.timing.duration_ms), 0) / durationFrames.length)
+        : null;
+      element("metric-output-count").textContent = state.summary ? String(outputCount) : "--";
+      element("metric-success-count").textContent = state.summary ? String(Math.max(0, outputCount - errorCount)) : "--";
+      element("metric-average-duration").textContent = average == null ? "--" : `${average} ms`;
+      element("metric-error-count").textContent = state.summary ? String(errorCount) : "--";
+    }
+
+    function clearCurrentDisplay() {
+      state.currentFrame = null;
+      state.currentCleared = true;
+      renderCurrentFrame();
+      element("overview-updated").textContent = "等待下一条输出";
+    }
+
+    function renderCurrentFrame() {
+      const frame = state.currentFrame;
+      const clearButton = element("clear-current");
+      clearButton.disabled = !frame;
+      if (!frame) {
+        element("current-frame-time").textContent = "等待输出";
+        element("current-route").textContent = "当前没有展示中的结果";
+        setStateBadge(element("current-state"), "waiting", "等待");
+        element("current-duration").textContent = "--";
+        element("current-source").textContent = "--";
+        element("current-binding").textContent = "--";
+        element("current-function").textContent = "--";
+        element("current-sinks").textContent = "--";
+        element("current-value").textContent = "--";
+        element("current-sink-results").innerHTML = "<li>--</li>";
+        setCurrentImage(null, false);
+        return;
+      }
+
+      const view = outputView(frame);
+      element("current-frame-time").textContent = `#${frame.id} · ${formatTime(frame.created_at_ms)}`;
+      element("current-route").textContent = routeText(frame);
+      setStateBadge(element("current-state"), view.isError ? "error" : "success", view.isError ? "错误" : "成功");
+      element("current-duration").textContent = `${frame.timing?.duration_ms ?? 0} ms`;
+      element("current-source").textContent = `${frame.route?.source_id || "--"} / ${frame.route?.key || "--"}`;
+      element("current-binding").textContent = frame.route?.binding_id || "--";
+      element("current-function").textContent = frame.route?.function_id || "--";
+      element("current-sinks").textContent = (frame.route?.sink_ids || []).join(", ") || "--";
+      element("current-value").textContent = view.text;
+      renderSinkResults(frame.sink_results || []);
+      setCurrentImage(findOutputImage(frame), true);
+    }
+
+    function setCurrentImage(image, hasFrame) {
+      const preview = element("current-image");
+      const empty = element("current-image-empty");
+      if (!image) {
+        preview.removeAttribute("src");
+        preview.classList.remove("active");
+        empty.classList.remove("hidden");
+        empty.innerHTML = hasFrame
+          ? '<span class="image-empty-mark">NO IMAGE</span>本次输出不包含图像'
+          : '<span class="image-empty-mark">WAITING FOR OUTPUT</span>等待下一条执行结果';
+        return;
+      }
+      preview.src = image;
+      preview.classList.add("active");
+      empty.classList.add("hidden");
+    }
+
+    function renderSinkResults(results) {
+      const target = element("current-sink-results");
+      if (!results.length) {
+        target.innerHTML = "<li>--</li>";
+        return;
+      }
+      target.replaceChildren(...results.map(result => {
+        const item = document.createElement("li");
+        item.textContent = `${result.sink_id}: ${result.state}${result.error ? ` · ${result.error}` : ""}`;
+        return item;
+      }));
+    }
+
+    function renderChains() {
+      const target = element("chain-list");
+      element("chain-count").textContent = `${state.chains.length} 条`;
+      if (!state.chains.length) {
+        target.innerHTML = '<div class="empty-state">暂无运行链路</div>';
+        return;
+      }
+      target.innerHTML = state.chains.map(chain => {
+        const devices = (chain.devices || []).map(device => device.id).join(", ") || "无设备";
+        const sinks = (chain.sinks || []).map(sink => sink.id).join(", ") || "无 Sink";
+        return `<div class="chain-row">
+          <div class="chain-name" title="${escapeAttribute(chain.binding || "")}">${escapeHtml(chain.binding || "--")}</div>
+          <div class="chain-flow">
+            <span class="chain-node">${escapeHtml(chain.source?.id || "--")} / ${escapeHtml(chain.source?.event || "--")}</span><span class="chain-arrow">→</span>
+            <span class="chain-node">${escapeHtml(chain.function?.id || "--")}</span><span class="chain-arrow">→</span>
+            <span class="chain-node">${escapeHtml(devices)}</span><span class="chain-arrow">→</span>
+            <span class="chain-node">${escapeHtml(sinks)}</span>
+          </div>
+          <span class="availability">${chain.debug ? "可调试" : "可用"}</span>
+        </div>`;
+      }).join("");
+    }
+
+    function renderRecent() {
+      const target = element("recent-table-body");
+      const items = state.latestOutputs.slice(0, 8);
+      if (!items.length) {
+        target.innerHTML = '<tr><td colspan="6"><div class="empty-state">暂无执行记录</div></td></tr>';
+        return;
+      }
+      target.innerHTML = items.map(outputRowHtml).join("");
+      target.querySelectorAll("[data-output-id]").forEach(row => row.addEventListener("click", () => {
+        showPage("history");
+        selectHistoryOutput(row.dataset.outputId).catch(handleError);
+      }));
+    }
+
+    function outputRowHtml(frame) {
+      const view = outputView(frame);
+      return `<tr data-output-id="${Number(frame.id)}">
+        <td class="mono">#${Number(frame.id)}</td>
+        <td><span class="state-badge ${view.isError ? "error" : ""}">${view.isError ? "错误" : "成功"}</span></td>
+        <td class="cell-ellipsis mono" title="${escapeAttribute(`${frame.route?.source_id || "--"} / ${frame.route?.binding_id || "--"}`)}">${escapeHtml(frame.route?.source_id || "--")} / ${escapeHtml(frame.route?.binding_id || "--")}</td>
+        <td class="mono">${escapeHtml(frame.route?.function_id || "--")}</td>
+        <td>${Number(frame.timing?.duration_ms || 0)} ms</td>
+        <td>${escapeHtml(formatTime(frame.created_at_ms))}</td>
+      </tr>`;
+    }
+
+    async function loadDebugBindings() {
+      state.debugBindings = await requestJson(state.routes.debug_bindings) || [];
+      const select = element("debug-binding");
+      select.replaceChildren();
+      if (!state.debugBindings.length) {
+        select.add(new Option("暂无可调试链路", ""));
+        select.disabled = true;
+        element("debug-trigger").disabled = true;
+        element("debug-count").textContent = "0 条";
+        return;
+      }
+      for (const binding of [...state.debugBindings].sort((left, right) => String(left.id).localeCompare(String(right.id)))) {
+        select.add(new Option(`${binding.id} · ${binding.function}`, binding.id));
+      }
+      select.disabled = false;
+      element("debug-trigger").disabled = false;
+      element("debug-count").textContent = `${state.debugBindings.length} 条`;
+    }
+
+    async function triggerDebug() {
+      const bindingId = element("debug-binding").value;
+      if (!bindingId) return;
+      let payload;
+      try {
+        payload = JSON.parse(element("debug-payload").value || "{}");
+      } catch (error) {
+        setInlineMessage("debug-message", `Payload JSON 无效：${error.message}`, "error");
+        return;
+      }
+      const button = element("debug-trigger");
+      setBusy(button, true);
+      setInlineMessage("debug-message", "正在发送调试消息");
+      try {
+        await requestJson(state.routes.debug_trigger, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ binding_id: bindingId, description: element("debug-description").value, payload })
+        });
+        setInlineMessage("debug-message", "调试消息已发送，等待执行结果", "success");
+      } catch (error) {
+        setInlineMessage("debug-message", error.message, "error");
+      } finally {
+        setBusy(button, false);
+      }
+    }
+
+    async function controlRuntime(command) {
+      const routeName = `runtime_${command}`;
+      const button = element(`runtime-${command}`);
+      setBusy(button, true);
+      try {
+        await requestJson(state.routes[routeName], { method: "POST" });
+        await Promise.all([loadRuntimeControlStatus(), loadSummary()]);
+        showNotice(({ start: "运行时已启动", stop: "运行时已停止", restart: "运行时已重启" })[command], "success");
+      } catch (error) {
+        showNotice(error.message, "error");
+      } finally {
+        setBusy(button, false);
+      }
+    }
+
+    async function loadHistory() {
+      const params = new URLSearchParams();
+      for (const id of ["source", "binding", "function", "sink", "state", "limit"]) {
+        const value = element(`filter-${id}`).value.trim();
+        if (value) params.set(id, value);
+      }
+      const url = params.size ? `${state.routes.outputs}?${params}` : state.routes.outputs;
+      state.historyOutputs = await requestJson(url) || [];
+      renderHistory();
+      element("history-count").textContent = `${state.historyOutputs.length} 条记录`;
+      if (state.selectedHistoryId && state.historyOutputs.some(frame => Number(frame.id) === Number(state.selectedHistoryId))) markSelectedHistoryRow();
+    }
+
+    function renderHistory() {
+      const target = element("history-table-body");
+      if (!state.historyOutputs.length) {
+        target.innerHTML = '<tr><td colspan="6"><div class="empty-state">没有符合条件的输出</div></td></tr>';
+        return;
+      }
+      target.innerHTML = state.historyOutputs.map(outputRowHtml).join("");
+      target.querySelectorAll("[data-output-id]").forEach(row => row.addEventListener("click", () => selectHistoryOutput(row.dataset.outputId).catch(handleError)));
+    }
+
+    async function selectHistoryOutput(id) {
+      state.selectedHistoryId = Number(id);
+      let frame = state.historyOutputs.find(item => Number(item.id) === Number(id));
+      if (!frame) frame = await requestJson(routeWithId("output_detail", id));
+      renderHistoryDetail(frame);
+      markSelectedHistoryRow();
+    }
+
+    function markSelectedHistoryRow() {
+      element("history-table-body").querySelectorAll("[data-output-id]").forEach(row => row.classList.toggle("selected", Number(row.dataset.outputId) === Number(state.selectedHistoryId)));
+    }
+
+    function renderHistoryDetail(frame) {
+      const view = outputView(frame);
+      element("history-detail-title").textContent = `输出 #${frame.id}`;
+      setStateBadge(element("history-detail-state"), view.isError ? "error" : "success", view.isError ? "错误" : "成功");
+      const image = findOutputImage(frame);
+      const imageTarget = element("history-detail-image");
+      imageTarget.replaceChildren();
+      if (image) {
+        const preview = document.createElement("img");
+        preview.src = image;
+        preview.alt = `输出 #${frame.id} 图像`;
+        imageTarget.appendChild(preview);
+      } else {
+        imageTarget.textContent = "该输出不包含图像";
+      }
+      element("history-detail-body").innerHTML = `
+        <div class="detail-section"><div class="detail-section-title">完整链路</div><div class="code-block mono">${escapeHtml(routeText(frame))}</div></div>
+        <div class="detail-section"><div class="detail-section-title">执行时间</div><div class="code-block mono">${escapeHtml(`${formatDateTime(frame.created_at_ms)} · ${frame.timing?.duration_ms ?? 0} ms`)}</div></div>
+        <div class="detail-section"><div class="detail-section-title">返回状态</div><pre class="code-block">${escapeHtml(JSON.stringify(frame.state, null, 2))}</pre></div>
+        <div class="detail-section"><div class="detail-section-title">Sink 结果</div><pre class="code-block">${escapeHtml(JSON.stringify(frame.sink_results || [], null, 2))}</pre></div>`;
+    }
+
+    function renderConfigTabs() {
+      const target = element("config-tabs");
+      target.replaceChildren(...Object.entries(CONFIG_MODULES).map(([name, module]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `config-tab${name === state.activeConfigModule ? " active" : ""}`;
+        button.textContent = module.label;
+        button.setAttribute("role", "tab");
+        button.setAttribute("aria-selected", String(name === state.activeConfigModule));
+        button.addEventListener("click", () => changeConfigModule(name));
+        return button;
+      }));
+    }
+
+    async function changeConfigModule(name) {
+      if (!CONFIG_MODULES[name] || name === state.activeConfigModule) return;
+      if (state.configDirty && !window.confirm("当前修改尚未应用，确定切换模块吗？")) return;
+      state.activeConfigModule = name;
+      state.configRecords = {};
+      state.selectedConfigId = null;
+      state.configDirty = false;
+      state.configEditMode = "fields";
+      state.configDraft = null;
+      renderConfigTabs();
+      await loadConfigModule();
+    }
+
+    async function loadConfigModule(preferredId = null) {
+      const module = CONFIG_MODULES[state.activeConfigModule];
+      state.configRecords = await requestJson(state.routes[module.route]) || {};
+      const ids = Object.keys(state.configRecords).sort((left, right) => left.localeCompare(right));
+      state.selectedConfigId = preferredId && state.configRecords[preferredId] ? preferredId : ids[0] || null;
+      state.configDirty = false;
+      state.configEditMode = "fields";
+      state.configDraft = null;
+      renderConfigList();
+      renderConfigEditor();
+    }
+
+    function renderConfigList() {
+      const target = element("config-list");
+      const query = element("config-search").value.trim().toLowerCase();
+      const ids = Object.keys(state.configRecords).sort((left, right) => left.localeCompare(right)).filter(id => id.toLowerCase().includes(query));
+      if (!ids.length) {
+        target.innerHTML = '<div class="empty-state">没有配置实例</div>';
+        return;
+      }
+      target.replaceChildren(...ids.map(id => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = `config-item${id === state.selectedConfigId ? " active" : ""}`;
+        button.textContent = id;
+        button.title = id;
+        button.addEventListener("click", () => selectConfigItem(id));
+        return button;
+      }));
+    }
+
+    function selectConfigItem(id) {
+      if (id === state.selectedConfigId) return;
+      if (state.configDirty && !window.confirm("当前修改尚未应用，确定切换配置吗？")) return;
+      state.selectedConfigId = id;
+      state.configDirty = false;
+      state.configEditMode = "fields";
+      state.configDraft = null;
+      renderConfigList();
+      renderConfigEditor();
+    }
+
+    function renderConfigEditor(resetDraft = true) {
+      const editor = element("config-editor");
+      const id = state.selectedConfigId;
+      element("config-editor-title").textContent = id ? `${CONFIG_MODULES[state.activeConfigModule].label} · ${id}` : "未选择配置";
+      if (resetDraft) {
+        state.configDraft = id ? cloneConfigValue(state.configRecords[id]) : null;
+        state.configEditMode = "fields";
+        setConfigDirty(false);
+      }
+      const hasRecord = Boolean(id && state.configDraft);
+      const jsonMode = state.configEditMode === "json";
+      element("config-field-list").classList.toggle("hidden", jsonMode);
+      element("config-json-wrap").classList.toggle("hidden", !jsonMode);
+      const toggle = element("config-json-toggle");
+      toggle.disabled = !hasRecord;
+      toggle.classList.toggle("mode-active", jsonMode);
+      toggle.textContent = jsonMode ? "返回字段" : "完整 JSON";
+      editor.disabled = !hasRecord;
+      editor.value = hasRecord ? JSON.stringify(state.configDraft, null, 2) : "{}";
+      renderConfigFields();
+      syncConfigActionButtons();
+      if (resetDraft) setConfigMessage(id ? "当前配置来自运行时内存" : "选择一个配置实例");
+    }
+
+    function renderConfigFields() {
+      const target = element("config-field-list");
+      const record = state.configDraft;
+      if (!record) {
+        target.innerHTML = '<div class="empty-state">未选择配置</div>';
+        return;
+      }
+      const tree = document.createElement("div");
+      tree.className = "config-tree";
+      tree.replaceChildren(...Object.entries(record).map(([name, value]) => renderConfigTreeNode(name, value, [name], 0)));
+      target.replaceChildren(tree);
+    }
+
+    function renderConfigTreeNode(name, value, path, depth, removal = null) {
+      const type = configValueType(value);
+      if (type === "object" || type === "array") {
+        const group = document.createElement("details");
+        group.className = "config-tree-node";
+        group.open = depth < 2;
+
+        const summary = document.createElement("summary");
+        summary.className = "config-tree-row config-tree-group-row";
+        const key = document.createElement("div");
+        key.className = "config-tree-group-key";
+        const disclosure = document.createElement("span");
+        disclosure.className = "config-tree-disclosure";
+        disclosure.textContent = "›";
+        disclosure.setAttribute("aria-hidden", "true");
+        key.append(disclosure, createConfigTreeKey(name, value));
+
+        const meta = document.createElement("div");
+        meta.className = "config-tree-group-meta";
+        const size = type === "array" ? value.length : Object.keys(value).length;
+        meta.textContent = `${configValueTypeLabel(value)} · ${size}${type === "array" ? " 项" : " 个字段"}`;
+
+        const actions = createConfigTreeActions(removal);
+        if (type === "array") {
+          const add = createConfigTreeIcon("+", `向 ${name} 添加一项`, () => addConfigArrayItem(path));
+          actions.prepend(add);
+        }
+        summary.append(key, meta, actions);
+
+        const children = document.createElement("div");
+        children.className = "config-tree-children";
+        const entries = type === "array" ? value.map((item, index) => [`[${index}]`, item, index]) : Object.entries(value).map(([childName, item]) => [childName, item, childName]);
+        if (!entries.length) {
+          const empty = document.createElement("div");
+          empty.className = "config-tree-empty";
+          empty.textContent = type === "array" ? "空列表" : "空对象";
+          children.append(empty);
+        } else {
+          for (const [childName, childValue, childPath] of entries) {
+            const childRemoval = type === "array" ? { path, index: childPath } : null;
+            children.append(renderConfigTreeNode(childName, childValue, [...path, childPath], depth + 1, childRemoval));
+          }
+        }
+        group.append(summary, children);
+        return group;
+      }
+
+      const row = document.createElement("div");
+      row.className = "config-tree-node config-tree-row";
+      row.append(createConfigTreeKey(name, value));
+      const field = document.createElement("div");
+      field.className = "config-tree-value";
+      field.append(createConfigTreeControl(name, value, path));
+      row.append(field, createConfigTreeActions(removal));
+      return row;
+    }
+
+    function createConfigTreeKey(name, value) {
+      const key = document.createElement("div");
+      key.className = "config-tree-key";
+      const label = document.createElement("strong");
+      label.textContent = name;
+      const type = document.createElement("span");
+      type.className = "config-tree-type";
+      type.textContent = configValueTypeLabel(value);
+      key.append(label, type);
+      return key;
+    }
+
+    function createConfigTreeControl(name, value, path) {
+      const type = configValueType(value);
+      const locked = path.length === 1 && name === "id";
+      if (type === "boolean") {
+        const control = document.createElement("label");
+        control.className = "config-toggle";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.checked = value;
+        checkbox.disabled = locked;
+        const track = document.createElement("span");
+        track.className = "config-toggle-track";
+        const text = document.createElement("span");
+        text.textContent = value ? "已开启" : "已关闭";
+        checkbox.addEventListener("change", () => {
+          text.textContent = checkbox.checked ? "已开启" : "已关闭";
+          updateConfigDraftValue(path, checkbox.checked);
+        });
+        control.append(checkbox, track, text);
+        return control;
+      }
+      const control = document.createElement("input");
+      control.className = "control config-tree-control";
+      control.type = type === "number" ? "number" : "text";
+      control.value = value === null ? "null" : String(value);
+      control.dataset.configName = name;
+      if (type === "number") control.step = "any";
+      if (locked || type === "null") {
+        control.readOnly = true;
+        return control;
+      }
+      control.addEventListener("input", () => {
+        if (type !== "number") {
+          updateConfigDraftValue(path, control.value);
+          return;
+        }
+        const nextValue = Number(control.value);
+        const invalid = !control.value.trim() || !Number.isFinite(nextValue);
+        control.setAttribute("aria-invalid", String(invalid));
+        setConfigDirty(true);
+        if (invalid) {
+          setConfigMessage(`字段 ${name} 必须是有效数字`, "error");
+          return;
+        }
+        updateConfigDraftValue(path, nextValue);
+      });
+      return control;
+    }
+
+    function createConfigTreeActions(removal) {
+      const actions = document.createElement("div");
+      actions.className = "config-tree-actions";
+      if (removal) actions.append(createConfigTreeIcon("×", "删除这一项", () => removeConfigArrayItem(removal.path, removal.index), "remove"));
+      return actions;
+    }
+
+    function createConfigTreeIcon(text, label, action, className = "") {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `config-tree-icon${className ? ` ${className}` : ""}`;
+      button.textContent = text;
+      button.title = label;
+      button.setAttribute("aria-label", label);
+      button.addEventListener("click", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        action();
+      });
+      return button;
+    }
+
+    function configValueType(value) {
+      if (value === null) return "null";
+      if (Array.isArray(value)) return "array";
+      return typeof value;
+    }
+
+    function configValueTypeLabel(value) {
+      return ({ string: "文本", number: "数字", boolean: "布尔", array: "列表", object: "对象", null: "空值" })[configValueType(value)] || "值";
+    }
+
+    function updateConfigDraftValue(path, value) {
+      let target = state.configDraft;
+      for (let index = 0; index < path.length - 1; index += 1) target = target[path[index]];
+      target[path[path.length - 1]] = value;
+      setConfigDirty(true);
+      setConfigMessage("修改尚未应用到运行时内存");
+    }
+
+    function configDraftValue(path) {
+      let value = state.configDraft;
+      for (const part of path) value = value[part];
+      return value;
+    }
+
+    function addConfigArrayItem(path) {
+      const array = configDraftValue(path);
+      const sample = array[0];
+      array.push(sample === undefined ? "" : emptyConfigValueLike(sample));
+      setConfigDirty(true);
+      renderConfigFields();
+      setConfigMessage("已添加列表项，修改尚未应用");
+    }
+
+    function removeConfigArrayItem(path, index) {
+      configDraftValue(path).splice(index, 1);
+      setConfigDirty(true);
+      renderConfigFields();
+      setConfigMessage("已删除列表项，修改尚未应用");
+    }
+
+    function emptyConfigValueLike(value) {
+      if (Array.isArray(value)) return value.map(emptyConfigValueLike);
+      if (value && typeof value === "object") return Object.fromEntries(Object.entries(value).map(([name, nested]) => [name, emptyConfigValueLike(nested)]));
+      if (typeof value === "number") return 0;
+      if (typeof value === "boolean") return false;
+      if (value === null) return null;
+      return "";
+    }
+
+    function toggleConfigJsonEditor() {
+      if (!state.selectedConfigId) return;
+      try {
+        if (state.configEditMode === "json") {
+          state.configDraft = parseConfigEditorValue();
+          state.configEditMode = "fields";
+        } else {
+          validateConfigFieldInputs();
+          state.configEditMode = "json";
+        }
+      } catch (error) {
+        setConfigMessage(error.message, "error");
+        return;
+      }
+      renderConfigEditor(false);
+      setConfigMessage(state.configEditMode === "json" ? "正在编辑当前配置的完整 JSON" : "字段修改尚未应用到运行时内存");
+    }
+
+    function validateConfigFieldInputs() {
+      const invalid = element("config-field-list").querySelector('[aria-invalid="true"]');
+      if (invalid) throw new Error(`字段 ${invalid.dataset.configName} 必须是有效数字`);
+    }
+
+    function parseConfigEditorValue() {
+      let value;
+      try {
+        value = JSON.parse(element("config-editor").value);
+      } catch (error) {
+        throw new Error(`JSON 无效：${error.message}`);
+      }
+      validateConfigRecord(value);
+      return value;
+    }
+
+    function validateConfigRecord(value) {
+      const id = state.selectedConfigId;
+      if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("配置必须是 JSON 对象");
+      if (value.id !== id) throw new Error(`配置 id 必须保持为 ${id}`);
+    }
+
+    function cloneConfigValue(value) {
+      return JSON.parse(JSON.stringify(value));
+    }
+
+    function setConfigDirty(dirty) {
+      state.configDirty = dirty;
+      element("config-dirty").textContent = dirty ? "有未应用修改" : "";
+      syncConfigActionButtons();
+    }
+
+    function syncConfigActionButtons() {
+      const enabled = Boolean(state.selectedConfigId && state.configDraft && state.configDirty);
+      element("config-apply").disabled = !enabled;
+      element("config-discard").disabled = !enabled;
+    }
+
+    function discardConfigChanges() {
+      if (!state.selectedConfigId) return;
+      state.configDraft = cloneConfigValue(state.configRecords[state.selectedConfigId]);
+      state.configEditMode = "fields";
+      setConfigDirty(false);
+      renderConfigEditor(false);
+      setConfigMessage("已放弃当前修改");
+    }
+
+    async function applySelectedConfig() {
+      const id = state.selectedConfigId;
+      if (!id) return;
+      let value;
+      try {
+        if (state.configEditMode === "fields") {
+          validateConfigFieldInputs();
+          value = cloneConfigValue(state.configDraft);
+          validateConfigRecord(value);
+        } else {
+          value = parseConfigEditorValue();
+        }
+      } catch (error) {
+        setConfigMessage(error.message, "error");
+        return;
+      }
+      const routeName = CONFIG_MODULES[state.activeConfigModule].route;
+      const button = element("config-apply");
+      setBusy(button, true);
+      try {
+        await requestJson(routeWithId(routeName, id), {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(value)
+        });
+        state.configRecords[id] = value;
+        state.configDraft = cloneConfigValue(value);
+        state.configEditMode = "fields";
+        setConfigDirty(false);
+        renderConfigEditor(false);
+        setConfigMessage("已写入配置内存，重启运行时后生效", "success");
+        await loadDebugBindings();
+      } catch (error) {
+        setConfigMessage(error.message, "error");
+      } finally {
+        setBusy(button, false);
+        syncConfigActionButtons();
+      }
+    }
+
+    async function validateConfig() {
+      const button = element("config-validate");
+      setBusy(button, true);
+      try {
+        const result = await requestJson(state.routes.config_validate, { method: "POST" });
+        element("config-validity").textContent = result.valid ? "当前配置有效" : "当前配置无效";
+        element("config-validity").style.color = result.valid ? "var(--success)" : "var(--danger)";
+        showNotice(result.valid ? "配置校验通过" : "配置校验未通过", result.valid ? "success" : "warning");
+      } catch (error) {
+        showNotice(error.message, "error");
+      } finally {
+        setBusy(button, false);
+      }
+    }
+
+    async function saveConfig() {
+      const button = element("config-save");
+      setBusy(button, true);
+      try {
+        await requestJson(state.routes.config_save, { method: "POST" });
+        showNotice("配置已保存到文件", "success");
+      } catch (error) {
+        showNotice(error.message, "error");
+      } finally {
+        setBusy(button, false);
+      }
+    }
+
+    async function loadChainsOnly() {
+      state.chains = await requestJson(state.routes.runtime_chain) || [];
+      renderChains();
+    }
+
+    function connectEvents() {
+      if (state.eventSource) state.eventSource.close();
+      const source = new EventSource(state.routes.runtime_events);
+      state.eventSource = source;
+      source.addEventListener("output", event => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (!payload.frame) return;
+          state.currentCleared = false;
+          state.currentFrame = payload.frame;
+          state.latestOutputs = [payload.frame, ...state.latestOutputs.filter(item => Number(item.id) !== Number(payload.frame.id))].slice(0, 20);
+          renderCurrentFrame();
+          renderRecent();
+          renderSummary();
+          element("overview-updated").textContent = `更新于 ${formatTime(payload.frame.created_at_ms)}`;
+          loadSummary().catch(handleError);
+        } catch (error) {
+          showNotice(`实时输出解析失败：${error.message}`, "error");
+        }
+      });
+      source.addEventListener("config_updated", () => {
+        loadChainsOnly().catch(handleError);
+        if (state.activePage === "config" && !state.configDirty) loadConfigModule(state.selectedConfigId).catch(handleError);
+      });
+      source.addEventListener("runtime_error", event => {
+        const payload = parseEventPayload(event.data);
+        const message = payload?.message || "运行时发生错误";
+        setRuntimeStatus(message, "error");
+        showNotice(message, "error");
+      });
+      source.addEventListener("heartbeat", () => setRuntimeStatus("实时通道已连接", "running"));
+      source.onopen = () => {
+        element("stream-reconnect").classList.add("hidden");
+        loadRuntimeControlStatus().catch(() => setRuntimeStatus("实时通道已连接", "running"));
+      };
+      source.onerror = () => {
+        setRuntimeStatus("实时通道连接中断", "error");
+        element("stream-reconnect").classList.remove("hidden");
+      };
+    }
+
+    function parseEventPayload(data) {
+      try { return JSON.parse(data); } catch (_) { return null; }
+    }
+
+    function outputView(frame) {
+      if (frame?.state?.error) {
+        return { isError: true, value: frame.state.error, text: `${frame.state.error.kind || "error"}: ${frame.state.error.message || "unknown error"}` };
+      }
+      const value = frame?.state?.success?.value;
+      return { isError: false, value, text: formatValue(value) };
+    }
+
+    function routeText(frame) {
+      const route = frame?.route || {};
+      return [
+        `${route.source_id || "--"} / ${route.key || "--"}`,
+        route.binding_id || "--",
+        route.function_id || "--",
+        (route.sink_ids || []).join(", ") || "--"
+      ].join(" → ");
+    }
+
+    function findOutputImage(frame) {
+      return findImageValue(frame?.state?.success?.value);
+    }
+
+    function findImageValue(value, depth = 0) {
+      if (value == null || depth > 6) return null;
+      if (typeof value === "string") {
+        if (value.startsWith("data:image/") || value.startsWith("blob:") || value.startsWith("/") || /^https?:\/\//i.test(value)) return value;
+        return null;
+      }
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          const found = findImageValue(item, depth + 1);
+          if (found) return found;
+        }
+        return null;
+      }
+      if (typeof value === "object") {
+        for (const key of ["image", "image_url", "imageUrl", "img", "frame", "preview", "data_url", "dataUrl"]) {
+          const found = findImageValue(value[key], depth + 1);
+          if (found) return found;
+        }
+        for (const item of Object.values(value)) {
+          const found = findImageValue(item, depth + 1);
+          if (found) return found;
+        }
+      }
+      return null;
+    }
+
+    function setStateBadge(target, stateName, text) {
+      target.className = `state-badge${stateName === "error" ? " error" : stateName === "waiting" ? " waiting" : ""}`;
+      target.textContent = text;
+    }
+
+    function setInlineMessage(id, message, kind = "") {
+      const target = element(id);
+      target.className = `inline-message${kind ? ` ${kind}` : ""}`;
+      target.textContent = message;
+    }
+
+    function setConfigMessage(message, kind = "") {
+      const target = element("config-message");
+      target.style.color = kind === "error" ? "var(--danger)" : kind === "success" ? "var(--success)" : "var(--muted)";
+      target.textContent = message;
+    }
+
+    function setBusy(button, busy) {
+      button.disabled = busy;
+      button.setAttribute("aria-busy", String(busy));
+    }
+
+    function formatValue(value) {
+      if (value == null) return "null";
+      if (typeof value === "string") return value;
+      try { return JSON.stringify(value, null, 2); } catch (_) { return String(value); }
+    }
+
+    function formatTime(ms) {
+      if (!ms) return "--:--:--";
+      return new Date(Number(ms)).toLocaleTimeString("zh-CN", { hour12: false });
+    }
+
+    function formatDateTime(ms) {
+      if (!ms) return "--";
+      return new Date(Number(ms)).toLocaleString("zh-CN", { hour12: false });
+    }
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[char]);
+    }
+
+    function escapeAttribute(value) {
+      return escapeHtml(value).replace(/`/g, "&#96;");
+    }
+
+    function handleError(error) {
+      showNotice(error?.message || String(error), "error");
+    }
+
+    function bindEvents() {
+      document.querySelectorAll("[data-page]").forEach(button => button.addEventListener("click", () => showPage(button.dataset.page)));
+      element("runtime-start").addEventListener("click", () => controlRuntime("start"));
+      element("runtime-stop").addEventListener("click", () => controlRuntime("stop"));
+      element("runtime-restart").addEventListener("click", () => controlRuntime("restart"));
+      element("stream-reconnect").addEventListener("click", connectEvents);
+      element("clear-current").addEventListener("click", clearCurrentDisplay);
+      element("recent-refresh").addEventListener("click", () => Promise.all([loadLatestOutputs(), loadSummary()]).catch(handleError));
+      element("debug-trigger").addEventListener("click", triggerDebug);
+      element("history-filter").addEventListener("submit", event => { event.preventDefault(); loadHistory().catch(handleError); });
+      element("history-refresh").addEventListener("click", () => loadHistory().catch(handleError));
+      element("config-refresh").addEventListener("click", () => loadConfigModule(state.selectedConfigId).catch(handleError));
+      element("config-validate").addEventListener("click", validateConfig);
+      element("config-save").addEventListener("click", saveConfig);
+      element("config-search").addEventListener("input", renderConfigList);
+      element("config-editor").addEventListener("input", () => setConfigDirty(true));
+      element("config-json-toggle").addEventListener("click", toggleConfigJsonEditor);
+      element("config-discard").addEventListener("click", discardConfigChanges);
+      element("config-apply").addEventListener("click", applySelectedConfig);
+      window.addEventListener("hashchange", () => showPage(window.location.hash.slice(1) || "overview"));
+    }
+
+    async function initialize() {
+      bindEvents();
+      renderConfigTabs();
+      showPage(window.location.hash.slice(1) || "overview");
+      try {
+        await loadInterface();
+      } catch (error) {
+        showNotice(`接口表加载失败，使用默认路由：${error.message}`, "warning");
+      }
+      const results = await Promise.allSettled([loadOverview(), loadRuntimeControlStatus(), loadDebugBindings()]);
+      for (const result of results) {
+        if (result.status === "rejected") handleError(result.reason);
+      }
+      connectEvents();
+    }
+
+    initialize().catch(handleError);
+  </script>
+</body>
+</html>
