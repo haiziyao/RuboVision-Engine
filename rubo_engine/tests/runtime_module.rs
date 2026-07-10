@@ -18,7 +18,7 @@ use std::{
     },
     task::{Context, Poll, RawWaker, RawWakerVTable, Waker},
 };
-use tokio::sync::mpsc;
+use tokio::sync::{Barrier, mpsc};
 
 #[test]
 fn handle_message_runs_dispatch_execute_and_sink_route() {
@@ -117,6 +117,46 @@ fn run_source_messages_handles_messages_until_channel_closes() {
         OutputState::Success(func_result) => assert_eq!(func_result.value()["value"], 15),
         OutputState::Error(error) => panic!("unexpected output error: {}", error.message()),
     }
+}
+
+#[tokio::test]
+async fn run_source_messages_handles_same_source_messages_concurrently() {
+    let config = valid_config();
+    let barrier = Arc::new(Barrier::new(2));
+    let active = Arc::new(AtomicUsize::new(0));
+    let max_active = Arc::new(AtomicUsize::new(0));
+    let mut functions = FunctionRegister::new();
+    functions.register(
+        "scale",
+        ConcurrentFunction {
+            barrier,
+            active: active.clone(),
+            max_active: max_active.clone(),
+        },
+    );
+    let mut devices = DevicePool::new();
+    devices.insert("camera", DeviceRef::shared("camera", Camera { value: 1 }));
+    let (sender, receiver) = mpsc::channel(2);
+    sender.try_send(Message::new("frame")).unwrap();
+    sender.try_send(Message::new("frame")).unwrap();
+    drop(sender);
+
+    let results = tokio::time::timeout(
+        std::time::Duration::from_millis(200),
+        run_source_messages(
+            "source",
+            receiver,
+            &config,
+            &functions,
+            &devices,
+            &SinkRegister::new(),
+        ),
+    )
+    .await
+    .expect("same-source messages ran sequentially");
+
+    assert_eq!(results.len(), 2);
+    assert_eq!(max_active.load(Ordering::SeqCst), 2);
 }
 
 #[tokio::test]
@@ -578,6 +618,23 @@ impl Function for ScaleFunction {
         Ok(FuncResult::new(json!({
             "value": function_call.message().payload_ref()["value"].as_i64().unwrap() * camera.value
         })))
+    }
+}
+
+struct ConcurrentFunction {
+    barrier: Arc<Barrier>,
+    active: Arc<AtomicUsize>,
+    max_active: Arc<AtomicUsize>,
+}
+
+#[async_trait]
+impl Function for ConcurrentFunction {
+    async fn call(&self, _function_call: FunctionCall<'_>) -> Result<FuncResult, FunctionError> {
+        let active = self.active.fetch_add(1, Ordering::SeqCst) + 1;
+        self.max_active.fetch_max(active, Ordering::SeqCst);
+        self.barrier.wait().await;
+        self.active.fetch_sub(1, Ordering::SeqCst);
+        Ok(FuncResult::new(json!(null)))
     }
 }
 

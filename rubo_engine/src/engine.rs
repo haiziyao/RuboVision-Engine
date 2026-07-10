@@ -13,9 +13,9 @@ use tokio::{
 };
 
 use crate::{
-    ChannelSinkFactory, ChannelSourceFactory, Device, DeviceRegister, Function, FunctionRegister,
-    IntervalSourceFactory, ManualSourceFactory, Message, Output, RuntimeError, RuntimeResources,
-    Sink, SinkError, SinkRegister, SourceRegister, WebConfig, WebRuntimeCommand,
+    ChannelSinkFactory, ChannelSourceFactory, Device, DeviceRegister, Function, FunctionAspect,
+    FunctionRegister, IntervalSourceFactory, ManualSourceFactory, Message, Output, RuntimeError,
+    RuntimeResources, Sink, SinkError, SinkRegister, SourceRegister, WebConfig, WebRuntimeCommand,
     WebRuntimeCommandKind, WebRuntimeControl, WebSink, WebState,
     config::{AppConfig, BindingConfig, RuboConfig, SinkConfig, SourceConfig},
     register_inventory, run_config_with_resources,
@@ -107,6 +107,13 @@ impl Engine {
         T: Function,
     {
         self.functions.register(id, function);
+    }
+
+    pub fn register_function_aspect<T>(&mut self, aspect: T)
+    where
+        T: FunctionAspect,
+    {
+        self.functions.register_aspect(aspect);
     }
 
     pub fn register_sink<T>(&mut self, id: impl Into<String>, sink: T)

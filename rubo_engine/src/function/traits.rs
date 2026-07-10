@@ -4,11 +4,20 @@ use async_trait::async_trait;
 use serde_json::Value;
 use tokio::sync::Mutex;
 
-use crate::{Device, DeviceRef, FunctionError, Message, MutexDevice, config::FuncConfig};
+use crate::{
+    Device, DeviceRef, FunctionError, Message, MutexDevice, Output, TaskRequest, config::FuncConfig,
+};
 
 #[async_trait]
 pub trait Function: Send + Sync + 'static {
     async fn call(&self, function_call: FunctionCall<'_>) -> Result<FuncResult, FunctionError>;
+}
+
+#[async_trait]
+pub trait FunctionAspect: Send + Sync + 'static {
+    async fn before(&self, task: &TaskRequest);
+
+    async fn after(&self, output: &Output);
 }
 
 #[derive(Debug, Clone, PartialEq)]

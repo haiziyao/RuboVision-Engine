@@ -1,3 +1,4 @@
+use futures::{StreamExt, stream::FuturesUnordered};
 use tokio::sync::mpsc;
 use tracing::{Instrument, info, info_span};
 
@@ -341,19 +342,54 @@ pub async fn run_source_messages(
     let source_id = source_id.into();
     let source_span_id = source_id.clone();
     async move {
+        let max_concurrent = receiver.max_capacity().max(1);
+        let source_id_ref = source_id.as_str();
+        let mut active = FuturesUnordered::new();
         let mut results = Vec::new();
-        while let Some(message) = receiver.recv().await {
-            let key = message.key().to_string();
-            info!(
-                "{}",
-                text(format!(
-                    "runtime.message.receive source={source_id} key={key}"
-                ))
-            );
-            results
-                .push(handle_message(&source_id, message, config, functions, devices, sinks).await);
+        let mut next_sequence = 0;
+        let mut receiver_closed = false;
+        loop {
+            if receiver_closed && active.is_empty() {
+                break;
+            }
+            tokio::select! {
+                result = active.next(), if !active.is_empty() => {
+                    if let Some(result) = result {
+                        results.push(result);
+                    }
+                }
+                message = receiver.recv(), if !receiver_closed && active.len() < max_concurrent => {
+                    match message {
+                        Some(message) => {
+                            let key = message.key().to_string();
+                            info!(
+                                "{}",
+                                text(format!(
+                                    "runtime.message.receive source={source_id_ref} key={key}"
+                                ))
+                            );
+                            let sequence = next_sequence;
+                            next_sequence += 1;
+                            active.push(async move {
+                                let output = handle_message(
+                                    source_id_ref,
+                                    message,
+                                    config,
+                                    functions,
+                                    devices,
+                                    sinks,
+                                )
+                                .await;
+                                (sequence, output)
+                            });
+                        }
+                        None => receiver_closed = true,
+                    }
+                }
+            }
         }
-        results
+        results.sort_by_key(|(sequence, _)| *sequence);
+        results.into_iter().map(|(_, output)| output).collect()
     }
     .instrument(info_span!(
         "runtime.source_messages",

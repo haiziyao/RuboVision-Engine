@@ -4,7 +4,8 @@ use axum::{
     extract::{Path, State},
 };
 use rubo_engine::{
-    Device, Engine, FuncResult, Function, FunctionCall, FunctionError, Message, OutputState,
+    Device, Engine, FuncResult, Function, FunctionAspect, FunctionCall, FunctionError, Message,
+    Output, OutputErrorKind, OutputState, TaskRequest,
     config::{
         AppConfig, BindingConfig, ConfigAccess, ConfigStore, DeviceConfig, FuncConfig, RuboConfig,
         SinkConfig, SourceConfig,
@@ -16,10 +17,89 @@ use rubo_engine::{
     web::api::{update_binding_api, update_source_api},
 };
 use serde_json::json;
+use std::sync::{Arc, Mutex};
 use tokio::{
     sync::mpsc,
     time::{Duration, sleep, timeout},
 };
+
+#[tokio::test]
+async fn function_aspect_runs_before_and_after_function() {
+    let mut config = RuboConfig::default();
+    config.sources_mut().insert(
+        "input".to_string(),
+        SourceConfig::new("input").kind("channel"),
+    );
+    config
+        .funcs_mut()
+        .insert("debug_fun".to_string(), FuncConfig::new("debug_fun"));
+    config.bindings_mut().insert(
+        "debug".to_string(),
+        BindingConfig::new("debug")
+            .source("input", "debug")
+            .func("debug_fun"),
+    );
+    let (sender, receiver) = mpsc::channel(1);
+    sender.send(Message::new("debug")).await.unwrap();
+    drop(sender);
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let mut engine = Engine::new(".", AppConfig::default(), config);
+    engine.insert_source_channel("input", receiver);
+    engine.register_function("debug_fun", DebugFunction);
+    engine.register_function_aspect(RecordingAspect::new(calls.clone()));
+
+    let result = engine.run(1).await.unwrap();
+
+    assert_eq!(result[0].runtime_outputs().len(), 1);
+    assert_eq!(
+        calls
+            .lock()
+            .expect("test aspect calls lock poisoned")
+            .as_slice(),
+        ["before:debug_fun", "after:debug_fun"]
+    );
+}
+
+#[tokio::test]
+async fn function_aspect_runs_after_when_function_panics() {
+    let mut config = RuboConfig::default();
+    config.sources_mut().insert(
+        "input".to_string(),
+        SourceConfig::new("input").kind("channel"),
+    );
+    config
+        .funcs_mut()
+        .insert("panic_fun".to_string(), FuncConfig::new("panic_fun"));
+    config.bindings_mut().insert(
+        "panic".to_string(),
+        BindingConfig::new("panic")
+            .source("input", "panic")
+            .func("panic_fun"),
+    );
+    let (sender, receiver) = mpsc::channel(1);
+    sender.send(Message::new("panic")).await.unwrap();
+    drop(sender);
+    let calls = Arc::new(Mutex::new(Vec::new()));
+    let mut engine = Engine::new(".", AppConfig::default(), config);
+    engine.insert_source_channel("input", receiver);
+    engine.register_function("panic_fun", PanicFunction);
+    engine.register_function_aspect(RecordingAspect::new(calls.clone()));
+
+    let result = engine.run(1).await.unwrap();
+    let output = result[0].runtime_outputs()[0].output();
+
+    match output.state() {
+        OutputState::Success(_) => panic!("unexpected success output"),
+        OutputState::Error(error) => assert_eq!(error.kind(), &OutputErrorKind::Function),
+    }
+    assert_eq!(
+        calls
+            .lock()
+            .expect("test aspect calls lock poisoned")
+            .as_slice(),
+        ["before:panic_fun", "after:panic_fun"]
+    );
+}
 
 #[tokio::test]
 async fn engine_run_once_orchestrates_channel_source_function_and_channel_sink() {
@@ -399,6 +479,45 @@ async fn engine_runtime_installs_web_runtime_control_api() {
     assert!(start.is_ok());
     assert_eq!(status.data().unwrap().running(), true);
     assert!(stop.is_ok());
+}
+
+struct RecordingAspect {
+    calls: Arc<Mutex<Vec<String>>>,
+}
+
+impl RecordingAspect {
+    fn new(calls: Arc<Mutex<Vec<String>>>) -> Self {
+        Self { calls }
+    }
+}
+
+#[async_trait]
+impl FunctionAspect for RecordingAspect {
+    async fn before(&self, task: &TaskRequest) {
+        self.calls
+            .lock()
+            .expect("test aspect calls lock poisoned")
+            .push(format!("before:{}", task.func_id()));
+    }
+
+    async fn after(&self, output: &Output) {
+        self.calls
+            .lock()
+            .expect("test aspect calls lock poisoned")
+            .push(format!(
+                "after:{}",
+                output.route().func_id().expect("function output")
+            ));
+    }
+}
+
+struct PanicFunction;
+
+#[async_trait]
+impl Function for PanicFunction {
+    async fn call(&self, _function_call: FunctionCall<'_>) -> Result<FuncResult, FunctionError> {
+        panic!("test function panic");
+    }
 }
 
 struct Camera;

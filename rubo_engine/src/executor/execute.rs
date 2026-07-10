@@ -1,4 +1,7 @@
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::{
+    panic::AssertUnwindSafe,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 use crate::{
     DevicePool, DispatchOutput, FunctionCall, FunctionDevices, FunctionRegister, Output,
@@ -6,6 +9,7 @@ use crate::{
     config::RuboConfig,
     log::{error_text, success_text, text},
 };
+use futures::FutureExt;
 use tracing::{Instrument, info, info_span};
 
 pub async fn execute(
@@ -110,9 +114,16 @@ async fn execute_task(
             }
         }
 
+        for aspect in functions.aspects() {
+            aspect.before(&task).await;
+        }
+
         let function_call = FunctionCall::new(function_config, task.message(), function_devices);
-        match function.call(function_call).await {
-            Ok(result) => {
+        let function_result = AssertUnwindSafe(function.call(function_call))
+            .catch_unwind()
+            .await;
+        let output = match function_result {
+            Ok(Ok(result)) => {
                 info!(
                     "{}",
                     success_text(format!(
@@ -122,12 +133,32 @@ async fn execute_task(
                 );
                 Output::success(route, OutputTiming::new(started_at_ms, now_ms()), result)
             }
-            Err(error) => Output::error(
+            Ok(Err(error)) => Output::error(
                 route,
                 OutputTiming::new(started_at_ms, now_ms()),
                 OutputError::new(OutputErrorKind::Function, error.to_string()),
             ),
+            Err(panic) => {
+                let message = panic
+                    .downcast_ref::<&str>()
+                    .map(|message| (*message).to_string())
+                    .or_else(|| panic.downcast_ref::<String>().cloned())
+                    .unwrap_or_else(|| "unknown panic".to_string());
+                Output::error(
+                    route,
+                    OutputTiming::new(started_at_ms, now_ms()),
+                    OutputError::new(
+                        OutputErrorKind::Function,
+                        format!("function panicked: {message}"),
+                    ),
+                )
+            }
+        };
+
+        for aspect in functions.aspects() {
+            aspect.after(&output).await;
         }
+        output
     }
     .instrument(span)
     .await

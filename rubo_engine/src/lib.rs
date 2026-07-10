@@ -21,7 +21,9 @@ pub use err::{
     SinkError, SourceError,
 };
 pub use executor::execute;
-pub use function::{FuncResult, Function, FunctionCall, FunctionDevices, FunctionRegister};
+pub use function::{
+    FuncResult, Function, FunctionAspect, FunctionCall, FunctionDevices, FunctionRegister,
+};
 #[doc(hidden)]
 pub use inventory;
 pub use output::{Output, OutputError, OutputErrorKind, OutputRoute, OutputState, OutputTiming};
