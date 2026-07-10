@@ -88,17 +88,42 @@ async fn cross_output(
 
 #[cfg(all(test, feature = "opencv"))]
 mod tests {
+    use opencv::highgui;
+    use rubo_engine::{FunctionDevices, Message};
+
     use super::*;
 
     #[tokio::test]
-    #[ignore = "requires Ubuntu, OpenCV and a configured camera"]
-    async fn cross_test() {
+    async fn test_cross() {
         let (config, camera) = crate::vision::test::load_camera("camera")
             .await
             .expect("load cross camera");
-        let output = cross_output(camera, 0, &config.funcs()["cross"])
+        let mut devices = FunctionDevices::new();
+        devices.insert("camera", &camera);
+        let message = Message::new("test_cross").payload(serde_json::json!({
+            "runtime_param": 0
+        }));
+        let call = FunctionCall::new(&config.funcs()["cross"], &message, devices);
+        let result = CrossDetect.call(call).await.expect("run cross function");
+        println!("cross value={}", result.value()["value"]);
+    }
+
+    #[tokio::test]
+    async fn test_cross_show() {
+        let (config, camera) = crate::vision::test::load_camera("camera")
             .await
-            .expect("detect cross");
-        crate::vision::test::show_frame("cross_test", &output.frame).expect("show frame");
+            .expect("load cross camera");
+        let camera = camera.get::<CameraDevice>().expect("get cross camera");
+        loop {
+            let output = cross_output(camera.clone(), 0, &config.funcs()["cross"])
+                .await
+                .expect("detect cross");
+            println!("cross value={}", output.value);
+            highgui::imshow("test_cross_show", &output.frame).expect("show cross frame");
+            let key = highgui::wait_key(1).expect("wait for cross key") & 0xff;
+            if key == 113 || key == 27 {
+                break;
+            }
+        }
     }
 }

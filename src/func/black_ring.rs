@@ -74,18 +74,44 @@ async fn black_ring_detect_output(
 
 #[cfg(all(test, feature = "opencv"))]
 mod tests {
+    use opencv::highgui;
+    use rubo_engine::{FunctionDevices, Message};
+
     use super::*;
 
     #[tokio::test]
-    #[ignore = "requires Ubuntu, OpenCV and a configured camera"]
-    async fn black_ring_detect_test() {
+    async fn test_black_ring() {
         let (config, camera) = crate::vision::test::load_camera("camera")
             .await
-            .expect("load color camera");
-        let output = black_ring_detect_output(camera, &config.funcs()["black_ring_detect"])
+            .expect("load black ring camera");
+        let mut devices = FunctionDevices::new();
+        devices.insert("camera", &camera);
+        let message = Message::new("test_black_ring");
+        let call = FunctionCall::new(&config.funcs()["black_ring_detect"], &message, devices);
+        let result = BlackRingDetect
+            .call(call)
             .await
-            .expect("detect black ring");
-        crate::vision::test::show_frame("black_ring_detect_test", &output.frame)
-            .expect("show frame");
+            .expect("run black ring function");
+        println!("black ring value={}", result.value()["value"]);
+    }
+
+    #[tokio::test]
+    async fn test_black_ring_show() {
+        let (config, camera) = crate::vision::test::load_camera("camera")
+            .await
+            .expect("load black ring camera");
+        let camera = camera.get::<CameraDevice>().expect("get black ring camera");
+        loop {
+            let output =
+                black_ring_detect_output(camera.clone(), &config.funcs()["black_ring_detect"])
+                    .await
+                    .expect("detect black ring");
+            println!("black ring value={}", output.value);
+            highgui::imshow("test_black_ring_show", &output.frame).expect("show black ring frame");
+            let key = highgui::wait_key(1).expect("wait for black ring key") & 0xff;
+            if key == 113 || key == 27 {
+                break;
+            }
+        }
     }
 }

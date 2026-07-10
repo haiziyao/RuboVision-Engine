@@ -847,7 +847,7 @@ dependencies = [
 [[package]]
 name = "rubo_engine"
 version = "0.2.0"
-source = "git+https://github.com/haiziyao/RuboVision-Engine.git?branch=engine#f899a1939b00e9ee46ed36d4308cf21db85cda40"
+source = "git+https://github.com/haiziyao/RuboVision-Engine.git?branch=engine#b50bf91c4132fbc9ce0cf2a32399bbda2a9ab7f0"
 dependencies = [
  "async-trait",
  "axum",
@@ -868,7 +868,7 @@ dependencies = [
 [[package]]
 name = "rubo_engine_macros"
 version = "0.1.0"
-source = "git+https://github.com/haiziyao/RuboVision-Engine.git?branch=engine#f899a1939b00e9ee46ed36d4308cf21db85cda40"
+source = "git+https://github.com/haiziyao/RuboVision-Engine.git?branch=engine#b50bf91c4132fbc9ce0cf2a32399bbda2a9ab7f0"
 dependencies = [
  "proc-macro2",
  "quote",

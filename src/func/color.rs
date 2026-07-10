@@ -69,17 +69,40 @@ async fn color_detect_output(
 
 #[cfg(all(test, feature = "opencv"))]
 mod tests {
+    use opencv::highgui;
+    use rubo_engine::{FunctionDevices, Message};
+
     use super::*;
 
     #[tokio::test]
-    #[ignore = "requires Ubuntu, OpenCV and a configured camera"]
-    async fn color_detect_test() {
+    async fn test_color() {
         let (config, camera) = crate::vision::test::load_camera("camera")
             .await
             .expect("load color camera");
-        let output = color_detect_output(camera, &config.funcs()["color_detect"])
+        let mut devices = FunctionDevices::new();
+        devices.insert("camera", &camera);
+        let message = Message::new("test_color");
+        let call = FunctionCall::new(&config.funcs()["color_detect"], &message, devices);
+        let result = ColorDetect.call(call).await.expect("run color function");
+        println!("color value={}", result.value()["value"]);
+    }
+
+    #[tokio::test]
+    async fn test_color_show() {
+        let (config, camera) = crate::vision::test::load_camera("camera")
             .await
-            .expect("detect color");
-        crate::vision::test::show_frame("color_detect_test", &output.frame).expect("show frame");
+            .expect("load color camera");
+        let camera = camera.get::<CameraDevice>().expect("get color camera");
+        loop {
+            let output = color_detect_output(camera.clone(), &config.funcs()["color_detect"])
+                .await
+                .expect("detect color");
+            println!("color value={}", output.value);
+            highgui::imshow("test_color_show", &output.frame).expect("show color frame");
+            let key = highgui::wait_key(1).expect("wait for color key") & 0xff;
+            if key == 113 || key == 27 {
+                break;
+            }
+        }
     }
 }

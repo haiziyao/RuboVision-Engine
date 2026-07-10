@@ -1,7 +1,7 @@
-use std::{path::Path, sync::Arc};
+use std::path::Path;
 
 use rubo_engine::{
-    DeviceRegister,
+    DeviceRef, DeviceRegister,
     config::{ConfigStore, RuboConfig},
 };
 
@@ -22,7 +22,7 @@ pub fn load_config() -> Result<RuboConfig, String> {
         .map_err(|error| error.to_string())
 }
 
-pub async fn load_camera(id: &str) -> Result<(RuboConfig, Arc<CameraDevice>), String> {
+pub async fn load_camera(id: &str) -> Result<(RuboConfig, DeviceRef), String> {
     let config = load_config()?;
     let device_config = config
         .devices()
@@ -33,8 +33,6 @@ pub async fn load_camera(id: &str) -> Result<(RuboConfig, Arc<CameraDevice>), St
     let device = register
         .create(device_config)
         .await
-        .map_err(|error| error.to_string())?
-        .get::<CameraDevice>()
         .map_err(|error| error.to_string())?;
     Ok((config, device))
 }

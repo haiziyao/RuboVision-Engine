@@ -69,17 +69,40 @@ async fn qr_detect_output(
 
 #[cfg(all(test, feature = "opencv"))]
 mod tests {
+    use opencv::highgui;
+    use rubo_engine::{FunctionDevices, Message};
+
     use super::*;
 
     #[tokio::test]
-    #[ignore = "requires Ubuntu, OpenCV and a configured camera"]
-    async fn qr_detect_test() {
+    async fn test_qr() {
         let (config, camera) = crate::vision::test::load_camera("camera")
             .await
             .expect("load qr camera");
-        let output = qr_detect_output(camera, &config.funcs()["qr_detect"])
+        let mut devices = FunctionDevices::new();
+        devices.insert("camera", &camera);
+        let message = Message::new("test_qr");
+        let call = FunctionCall::new(&config.funcs()["qr_detect"], &message, devices);
+        let result = QrDetect.call(call).await.expect("run qr function");
+        println!("qr value={}", result.value()["value"]);
+    }
+
+    #[tokio::test]
+    async fn test_qr_show() {
+        let (config, camera) = crate::vision::test::load_camera("camera")
             .await
-            .expect("detect qr");
-        crate::vision::test::show_frame("qr_detect_test", &output.frame).expect("show frame");
+            .expect("load qr camera");
+        let camera = camera.get::<CameraDevice>().expect("get qr camera");
+        loop {
+            let output = qr_detect_output(camera.clone(), &config.funcs()["qr_detect"])
+                .await
+                .expect("detect qr");
+            println!("qr value={}", output.value);
+            highgui::imshow("test_qr_show", &output.frame).expect("show qr frame");
+            let key = highgui::wait_key(1).expect("wait for qr key") & 0xff;
+            if key == 113 || key == 27 {
+                break;
+            }
+        }
     }
 }

@@ -98,6 +98,7 @@ mod tests {
         let (_, camera) = crate::vision::test::load_camera("camera")
             .await
             .expect("load camera");
+        let camera = camera.get::<super::CameraDevice>().expect("get camera");
         let frame = camera.frame().await.expect("read camera frame");
         crate::vision::test::show_frame("camera_test", &frame).expect("show camera frame");
     }
