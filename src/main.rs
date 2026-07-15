@@ -26,7 +26,16 @@ async fn main() {
         init_tracing(app_config.log().level());
     }
 
-    let declared_config = default_rubo_config();
+    let declared_config = match default_rubo_config(&app_config) {
+        Ok(config) => config,
+        Err(error) => {
+            eprintln!(
+                "{}",
+                error_text(format!("rubo_vision.declared_config.error error={error}"))
+            );
+            return;
+        }
+    };
     let active_config = match ConfigStore::load_or_init_config(root, &app_config, &declared_config)
     {
         Ok(config) => config,

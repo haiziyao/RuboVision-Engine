@@ -1,9 +1,11 @@
 name: rubo_vision
 config_path: config
+# 可选值：orangepi、raspberrypi
+profile: orangepi
 config_format: toml
 web:
   enabled: true
-  host: 127.0.0.1
+  host: 0.0.0.0
   port: 3888
 log:
   enabled: true

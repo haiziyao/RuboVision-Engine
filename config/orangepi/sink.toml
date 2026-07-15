@@ -1,18 +1,19 @@
 [gpio]
 active_low = true
+chip = 7
 kind = "gpio"
-run_pin = 27
+run_pin = 3
 
 [gpio.signals]
-color = 17
-qr = 22
+color = 4
+qr = 5
 
 [uart]
 baud = 9600
 data_bit = 8
 kind = "uart"
 parity_bit = false
-serial = "/dev/ttyV0"
+serial = "/dev/ttyAMA1"
 stop_bit = 1
 
 [web]

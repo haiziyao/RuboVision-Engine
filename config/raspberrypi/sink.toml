@@ -1,0 +1,20 @@
+[gpio]
+active_low = true
+chip = 0
+kind = "gpio"
+run_pin = 27
+
+[gpio.signals]
+color = 17
+qr = 22
+
+[uart]
+baud = 9600
+data_bit = 8
+kind = "uart"
+parity_bit = false
+serial = "/dev/serial0"
+stop_bit = 1
+
+[web]
+kind = "web"

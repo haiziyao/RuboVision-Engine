@@ -1,0 +1,10 @@
+[uart]
+baud = 9600
+data_bit = 8
+kind = "uart"
+parity_bit = false
+serial = "/dev/serial0"
+stop_bit = 1
+prefix = []
+suffix = []
+content_bytes = 1

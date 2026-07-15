@@ -18,7 +18,8 @@ pub fn load_config() -> Result<RuboConfig, String> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let app_config =
         ConfigStore::load_app_config(root.join("config")).map_err(|error| error.to_string())?;
-    ConfigStore::load_or_init_config(root, &app_config, &default_rubo_config())
+    let declared_config = default_rubo_config(&app_config).map_err(|error| error.to_string())?;
+    ConfigStore::load_or_init_config(root, &app_config, &declared_config)
         .map_err(|error| error.to_string())
 }
 

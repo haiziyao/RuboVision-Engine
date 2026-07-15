@@ -30,7 +30,8 @@ mod tests {
 
     #[tokio::test]
     async fn debug_fun_test() {
-        let config = default_rubo_config();
+        let app_config = crate::config::default_app_config();
+        let config = default_rubo_config(&app_config).expect("load default config");
         let function_config = &config.funcs()["debug_fun"];
         let message = Message::new("debug");
         let call = FunctionCall::new(function_config, &message, FunctionDevices::new());

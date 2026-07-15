@@ -31,10 +31,13 @@
       "kind": "uart",
       "config": {
         "baud": 9600,
+        "content_bytes": 1,
         "data_bit": 8,
         "parity_bit": false,
-        "serial": "/dev/ttyV0",
-        "stop_bit": 1
+        "prefix": [],
+        "serial": "/dev/ttyAMA1",
+        "stop_bit": 1,
+        "suffix": []
       }
     },
     "function": {
@@ -59,7 +62,7 @@
         "id": "camera",
         "kind": "camera",
         "config": {
-          "path": "/dev/video2"
+          "path": "/dev/video0"
         }
       }
     ],
@@ -76,7 +79,7 @@
           "baud": 9600,
           "data_bit": 8,
           "parity_bit": false,
-          "serial": "/dev/ttyV0",
+          "serial": "/dev/ttyAMA1",
           "stop_bit": 1
         }
       }
@@ -91,10 +94,13 @@
       "kind": "uart",
       "config": {
         "baud": 9600,
+        "content_bytes": 1,
         "data_bit": 8,
         "parity_bit": false,
-        "serial": "/dev/ttyV0",
-        "stop_bit": 1
+        "prefix": [],
+        "serial": "/dev/ttyAMA1",
+        "stop_bit": 1,
+        "suffix": []
       }
     },
     "function": {
@@ -169,7 +175,7 @@
         "id": "camera",
         "kind": "camera",
         "config": {
-          "path": "/dev/video2"
+          "path": "/dev/video0"
         }
       }
     ],
@@ -186,7 +192,7 @@
           "baud": 9600,
           "data_bit": 8,
           "parity_bit": false,
-          "serial": "/dev/ttyV0",
+          "serial": "/dev/ttyAMA1",
           "stop_bit": 1
         }
       }
@@ -201,10 +207,13 @@
       "kind": "uart",
       "config": {
         "baud": 9600,
+        "content_bytes": 1,
         "data_bit": 8,
         "parity_bit": false,
-        "serial": "/dev/ttyV0",
-        "stop_bit": 1
+        "prefix": [],
+        "serial": "/dev/ttyAMA1",
+        "stop_bit": 1,
+        "suffix": []
       }
     },
     "function": {
@@ -305,7 +314,7 @@
         "id": "camera",
         "kind": "camera",
         "config": {
-          "path": "/dev/video2"
+          "path": "/dev/video0"
         }
       }
     ],
@@ -322,7 +331,7 @@
           "baud": 9600,
           "data_bit": 8,
           "parity_bit": false,
-          "serial": "/dev/ttyV0",
+          "serial": "/dev/ttyAMA1",
           "stop_bit": 1
         }
       }
@@ -337,10 +346,13 @@
       "kind": "uart",
       "config": {
         "baud": 9600,
+        "content_bytes": 1,
         "data_bit": 8,
         "parity_bit": false,
-        "serial": "/dev/ttyV0",
-        "stop_bit": 1
+        "prefix": [],
+        "serial": "/dev/ttyAMA1",
+        "stop_bit": 1,
+        "suffix": []
       }
     },
     "function": {
@@ -356,7 +368,7 @@
         "id": "camera",
         "kind": "camera",
         "config": {
-          "path": "/dev/video2"
+          "path": "/dev/video0"
         }
       }
     ],
@@ -373,7 +385,7 @@
           "baud": 9600,
           "data_bit": 8,
           "parity_bit": false,
-          "serial": "/dev/ttyV0",
+          "serial": "/dev/ttyAMA1",
           "stop_bit": 1
         }
       }

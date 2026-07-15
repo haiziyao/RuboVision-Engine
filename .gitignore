@@ -1,4 +1,5 @@
 /target/
 .superpowers/brainstorm
-doc/
+doc/*
+!doc/kunpeng_pro_migration.md
 logs/
