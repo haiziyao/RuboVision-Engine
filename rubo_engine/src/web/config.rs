@@ -81,6 +81,7 @@ pub struct WebRoutes {
     config_functions: String,
     config_sinks: String,
     config_bindings: String,
+    config_profile: String,
     config_validate: String,
     config_save: String,
     debug_bindings: String,
@@ -109,6 +110,7 @@ impl Default for WebRoutes {
             config_functions: "/api/config/functions".to_string(),
             config_sinks: "/api/config/sinks".to_string(),
             config_bindings: "/api/config/bindings".to_string(),
+            config_profile: "/api/config/profile".to_string(),
             config_validate: "/api/config/validate".to_string(),
             config_save: "/api/config/save".to_string(),
             debug_bindings: "/api/debug/bindings".to_string(),
@@ -192,6 +194,10 @@ impl WebRoutes {
 
     pub fn config_bindings(&self) -> &str {
         &self.config_bindings
+    }
+
+    pub fn config_profile(&self) -> &str {
+        &self.config_profile
     }
 
     pub fn config_validate(&self) -> &str {

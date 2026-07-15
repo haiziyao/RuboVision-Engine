@@ -39,12 +39,13 @@ pub use runtime::{
     run_source_messages,
 };
 pub use sink::{
-    ChannelSink, ChannelSinkFactory, Sink, SinkFactory, SinkRegister, SinkRouteResult,
-    SinkRouteState, route_output,
+    ChannelSink, ChannelSinkFactory, GpioSink, GpioSinkFactory, Sink, SinkFactory, SinkRegister,
+    SinkRouteResult, SinkRouteState, UartSink, UartSinkFactory, route_output,
 };
 pub use source::{
     ChannelSource, ChannelSourceFactory, IntervalSource, IntervalSourceFactory, ManualSource,
-    ManualSourceFactory, Message, Source, SourceFactory, SourceHandler, SourceRegister,
+    ManualSourceFactory, Message, Source, SourceFactory, SourceHandler, SourceRegister, UartSource,
+    UartSourceFactory,
 };
 pub use web::{
     WEB_SINK_ID, WEB_SOURCE_ID, WebConfig, WebError, WebErrorKind, WebEvent, WebEventKind,

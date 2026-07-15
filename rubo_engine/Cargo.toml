@@ -9,6 +9,10 @@ documentation = "https://docs.rs/rubo_engine"
 keywords = ["runtime", "pipeline", "debugger", "vision"]
 categories = ["asynchronous"]
 
+[features]
+default = []
+hardware = ["dep:gpiod", "dep:serialport"]
+
 [dependencies]
 async-trait = "0.1"
 axum = "0.8"
@@ -24,6 +28,10 @@ tokio = { version = "1", features = ["sync", "rt", "macros", "net", "time"] }
 toml = "1"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt", "env-filter", "ansi"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+gpiod = { version = "0.3.0", optional = true }
+serialport = { version = "4.9.0", default-features = false, optional = true }
 
 [dev-dependencies]
 tempfile = "3"

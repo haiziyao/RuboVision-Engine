@@ -144,6 +144,20 @@ impl WebInterface {
                     "binding config",
                 ),
                 WebRouteInfo::new(
+                    "config_profile",
+                    "GET",
+                    routes.config_profile(),
+                    "config",
+                    "active and selected config profile",
+                ),
+                WebRouteInfo::new(
+                    "config_profile_update",
+                    "PUT",
+                    routes.config_profile(),
+                    "config",
+                    "select config profile for next startup",
+                ),
+                WebRouteInfo::new(
                     "config_validate",
                     "POST",
                     routes.config_validate(),

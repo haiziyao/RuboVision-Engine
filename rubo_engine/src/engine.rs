@@ -14,9 +14,10 @@ use tokio::{
 
 use crate::{
     ChannelSinkFactory, ChannelSourceFactory, Device, DeviceRegister, Function, FunctionAspect,
-    FunctionRegister, IntervalSourceFactory, ManualSourceFactory, Message, Output, RuntimeError,
-    RuntimeResources, Sink, SinkError, SinkRegister, SourceRegister, WebConfig, WebRuntimeCommand,
-    WebRuntimeCommandKind, WebRuntimeControl, WebSink, WebState,
+    FunctionRegister, GpioSinkFactory, IntervalSourceFactory, ManualSourceFactory, Message, Output,
+    RuntimeError, RuntimeResources, Sink, SinkError, SinkRegister, SourceRegister, UartSinkFactory,
+    UartSourceFactory, WebConfig, WebRuntimeCommand, WebRuntimeCommandKind, WebRuntimeControl,
+    WebSink, WebState,
     config::{AppConfig, BindingConfig, RuboConfig, SinkConfig, SourceConfig},
     register_inventory, run_config_with_resources,
     web::{WEB_SINK_ID, WEB_SOURCE_ID, WebError, serve},
@@ -45,9 +46,12 @@ impl Engine {
         source_register.register("channel", ChannelSourceFactory);
         source_register.register("manual", ManualSourceFactory);
         source_register.register("interval", IntervalSourceFactory);
+        source_register.register("uart", UartSourceFactory);
 
         let mut sinks = SinkRegister::new();
         sinks.register_factory("channel", ChannelSinkFactory);
+        sinks.register_factory("uart", UartSinkFactory);
+        sinks.register_factory("gpio", GpioSinkFactory);
 
         let mut device_register = DeviceRegister::new();
         let mut functions = FunctionRegister::new();

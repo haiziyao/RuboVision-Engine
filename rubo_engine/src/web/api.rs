@@ -14,7 +14,7 @@ use serde_json::{Map, Value, json};
 
 use crate::{
     config::{
-        BindingConfig, ConfigAccess, DeviceConfig, FuncConfig, RuboConfig, SinkConfig,
+        BindingConfig, ConfigAccess, ConfigStore, DeviceConfig, FuncConfig, RuboConfig, SinkConfig,
         SourceConfig, save_update, update_binding, update_device, update_func, update_sink,
         update_source,
     },
@@ -384,6 +384,65 @@ pub async fn config_save(State(state): State<WebState>) -> Json<WebResponse<Stri
     }
 }
 
+pub async fn profile_status(State(state): State<WebState>) -> Json<WebResponse<WebProfileStatus>> {
+    Json(match read_profile_status(&state) {
+        Ok(status) => WebResponse::ok(status),
+        Err(error) => WebResponse::error(error),
+    })
+}
+
+pub async fn update_profile(
+    State(state): State<WebState>,
+    Json(request): Json<WebProfileUpdate>,
+) -> Json<WebResponse<WebProfileStatus>> {
+    let available_profiles = match ConfigStore::list_profiles(state.root(), state.app_config()) {
+        Ok(profiles) => profiles,
+        Err(error) => return Json(WebResponse::error(WebError::config(error.to_string()))),
+    };
+    if !available_profiles
+        .iter()
+        .any(|profile| profile == &request.profile)
+    {
+        return Json(WebResponse::error(WebError::invalid_request(format!(
+            "config profile `{}` does not exist",
+            request.profile
+        ))));
+    }
+    let application_dir = state.root().join("config");
+    let mut app_config = match ConfigStore::load_app_config(&application_dir) {
+        Ok(config) => config,
+        Err(error) => return Json(WebResponse::error(WebError::config(error.to_string()))),
+    };
+    app_config.set_profile(&request.profile);
+    if let Err(error) = ConfigStore::save_app_config(&application_dir, &app_config) {
+        return Json(WebResponse::error(WebError::config(error.to_string())));
+    }
+    let status = WebProfileStatus {
+        active_profile: state.app_config().profile().to_string(),
+        selected_profile: request.profile,
+        available_profiles,
+        restart_required: state.app_config().profile() != app_config.profile(),
+    };
+    state
+        .hub()
+        .publish(WebEvent::config_updated("config profile updated"));
+    Json(WebResponse::ok(status))
+}
+
+fn read_profile_status(state: &WebState) -> Result<WebProfileStatus, WebError> {
+    let application_dir = state.root().join("config");
+    let selected = ConfigStore::load_app_config(application_dir)
+        .map_err(|error| WebError::config(error.to_string()))?;
+    let available_profiles = ConfigStore::list_profiles(state.root(), state.app_config())
+        .map_err(|error| WebError::config(error.to_string()))?;
+    Ok(WebProfileStatus {
+        active_profile: state.app_config().profile().to_string(),
+        selected_profile: selected.profile().to_string(),
+        available_profiles,
+        restart_required: state.app_config().profile() != selected.profile(),
+    })
+}
+
 pub async fn debug_bindings(
     State(state): State<WebState>,
 ) -> Json<WebResponse<Vec<BindingConfig>>> {
@@ -455,6 +514,19 @@ impl WebRuntimeControlStatus {
 #[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
 pub struct WebConfigValid {
     valid: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub struct WebProfileStatus {
+    active_profile: String,
+    selected_profile: String,
+    available_profiles: Vec<String>,
+    restart_required: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, PartialEq, Eq)]
+pub struct WebProfileUpdate {
+    profile: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]

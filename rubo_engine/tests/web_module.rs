@@ -7,8 +7,9 @@ use rubo_engine::{
     WebOutputFrame, WebOutputState, WebResponse, WebSink, WebState, build_router,
     config::{AppConfig, RuboConfig, SinkConfig, SourceConfig},
     web::api::{
-        WebDebugTriggerRequest, debug_trigger, health, index_html, remove_source_api,
-        runtime_control_status, runtime_restart, runtime_start, runtime_stop, runtime_summary,
+        WebDebugTriggerRequest, WebProfileUpdate, debug_trigger, health, index_html,
+        profile_status, remove_source_api, runtime_control_status, runtime_restart, runtime_start,
+        runtime_stop, runtime_summary, update_profile,
     },
 };
 use serde_json::json;
@@ -52,6 +53,10 @@ fn web_index_html_discovers_routes_and_updates_one_config_instance() {
     assert!(html.contains("renderConfigTreeNode"));
     assert!(html.contains("updateConfigDraftValue"));
     assert!(html.contains("addConfigArrayItem"));
+    assert!(html.contains(r#"id="profile-active""#));
+    assert!(html.contains(r#"id="profile-select""#));
+    assert!(html.contains(r#"id="profile-save""#));
+    assert!(html.contains("loadProfileStatus"));
 }
 
 #[test]
@@ -71,6 +76,7 @@ fn web_config_defaults_to_confirmed_port_and_routes() {
     );
     assert_eq!(config.routes().outputs_latest(), "/api/outputs/latest");
     assert_eq!(config.routes().config_save(), "/api/config/save");
+    assert_eq!(config.routes().config_profile(), "/api/config/profile");
 }
 
 #[test]
@@ -150,6 +156,53 @@ fn web_interface_lists_confirmed_pages_and_routes() {
             .routes()
             .iter()
             .any(|route| route.name() == "runtime_restart")
+    );
+    assert!(
+        interface
+            .routes()
+            .iter()
+            .any(|route| route.name() == "config_profile")
+    );
+}
+
+#[tokio::test]
+async fn web_profile_api_reports_active_and_selected_profiles() {
+    let temp = tempfile::tempdir().unwrap();
+    let application_dir = temp.path().join("config");
+    std::fs::create_dir_all(application_dir.join("orangepi")).unwrap();
+    std::fs::create_dir_all(application_dir.join("raspberrypi")).unwrap();
+    std::fs::write(application_dir.join("orangepi/source.toml"), "").unwrap();
+    std::fs::write(application_dir.join("raspberrypi/source.toml"), "").unwrap();
+    std::fs::write(
+        application_dir.join("application.yaml"),
+        "config_path: config\nprofile: orangepi\n",
+    )
+    .unwrap();
+    let app_config = rubo_engine::config::ConfigStore::load_app_config(&application_dir).unwrap();
+    let state = WebState::new(temp.path(), app_config, RuboConfig::default());
+
+    let Json(initial) = profile_status(State(state.clone())).await;
+    let initial = serde_json::to_value(initial.data().unwrap()).unwrap();
+    assert_eq!(initial["active_profile"], "orangepi");
+    assert_eq!(initial["selected_profile"], "orangepi");
+    assert_eq!(
+        initial["available_profiles"],
+        json!(["orangepi", "raspberrypi"])
+    );
+    assert_eq!(initial["restart_required"], false);
+
+    let request: WebProfileUpdate =
+        serde_json::from_value(json!({ "profile": "raspberrypi" })).unwrap();
+    let Json(updated) = update_profile(State(state.clone()), Json(request)).await;
+    let updated = serde_json::to_value(updated.data().unwrap()).unwrap();
+    assert_eq!(updated["active_profile"], "orangepi");
+    assert_eq!(updated["selected_profile"], "raspberrypi");
+    assert_eq!(updated["restart_required"], true);
+    assert_eq!(
+        rubo_engine::config::ConfigStore::load_app_config(&application_dir)
+            .unwrap()
+            .profile(),
+        "raspberrypi"
     );
 }
 

@@ -1,5 +1,6 @@
 use std::{
     collections::{BTreeSet, HashMap},
+    fs,
     path::{Path, PathBuf},
 };
 
@@ -27,7 +28,7 @@ impl ConfigStore {
         declared_config: &RuboConfig,
     ) -> Result<RuboConfig, ConfigError> {
         let root = root.as_ref();
-        let config_path = root.join(app_config.config_path());
+        let config_path = root.join(app_config.config_dir());
         let span = info_span!(
             target: "rubo_engine::config::store",
             "config.load_or_init",
@@ -206,6 +207,62 @@ impl ConfigStore {
         );
 
         Ok(config)
+    }
+
+    pub fn save_app_config(
+        application_dir: impl AsRef<Path>,
+        app_config: &AppConfig,
+    ) -> Result<(), ConfigError> {
+        let application_dir = application_dir.as_ref();
+        fs::create_dir_all(application_dir)?;
+        let path = find_module_file(application_dir, "application")?
+            .unwrap_or_else(|| application_dir.join("application.yaml"));
+        let content = match path.extension().and_then(|extension| extension.to_str()) {
+            Some("json") => serde_json::to_string_pretty(app_config).map_err(format_error)?,
+            Some("toml") => toml::to_string_pretty(app_config).map_err(format_error)?,
+            Some("yaml" | "yml") => serde_yaml_bw::to_string(app_config).map_err(format_error)?,
+            _ => {
+                return Err(ConfigError::ConfigFormat {
+                    message: format!("unsupported application config format: {}", path.display()),
+                });
+            }
+        };
+        fs::write(path, content)?;
+        Ok(())
+    }
+
+    pub fn list_profiles(
+        root: impl AsRef<Path>,
+        app_config: &AppConfig,
+    ) -> Result<Vec<String>, ConfigError> {
+        let base = root.as_ref().join(app_config.config_path());
+        let entries = match fs::read_dir(&base) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => {
+                return Err(ConfigError::ConfigLoad {
+                    message: error.to_string(),
+                });
+            }
+        };
+        let mut profiles = Vec::new();
+        for entry in entries {
+            let entry = entry.map_err(|error| ConfigError::ConfigLoad {
+                message: error.to_string(),
+            })?;
+            let path = entry.path();
+            if path.is_dir() && has_active_config_files(&path) {
+                profiles.push(entry.file_name().to_string_lossy().into_owned());
+            }
+        }
+        profiles.sort();
+        Ok(profiles)
+    }
+}
+
+fn format_error(error: impl std::fmt::Display) -> ConfigError {
+    ConfigError::ConfigFormat {
+        message: error.to_string(),
     }
 }
 

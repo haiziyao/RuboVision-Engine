@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 pub struct AppConfig {
     name: String,
     config_path: PathBuf,
+    profile: String,
     config_format: ConfigFileFormat,
     web: AppWebConfig,
     log: AppLogConfig,
@@ -17,6 +18,7 @@ impl Default for AppConfig {
         Self {
             name: "rubo_engine".to_string(),
             config_path: PathBuf::from("config"),
+            profile: String::new(),
             config_format: ConfigFileFormat::Json,
             web: AppWebConfig::default(),
             log: AppLogConfig::default(),
@@ -31,6 +33,22 @@ impl AppConfig {
 
     pub fn config_path(&self) -> &Path {
         &self.config_path
+    }
+
+    pub fn profile(&self) -> &str {
+        &self.profile
+    }
+
+    pub fn set_profile(&mut self, profile: impl Into<String>) {
+        self.profile = profile.into();
+    }
+
+    pub fn config_dir(&self) -> PathBuf {
+        if self.profile.is_empty() {
+            self.config_path.clone()
+        } else {
+            self.config_path.join(&self.profile)
+        }
     }
 
     pub fn config_format(&self) -> ConfigFileFormat {

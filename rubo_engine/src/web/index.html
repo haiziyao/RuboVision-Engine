@@ -237,6 +237,12 @@
     .code-block { max-height: 220px; margin: 0; padding: 9px; overflow: auto; background: #f2f5f3; color: #48564f; font-size: 11px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
 
     .config-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+    .profile-bar { min-height: 58px; display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 12px; padding: 10px 12px; border: 1px solid var(--line); border-left: 4px solid var(--info); background: var(--surface); }
+    .profile-status { min-width: 0; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+    .profile-status strong { color: #34443d; font-size: 13px; }
+    .profile-status span { color: var(--muted); font-size: 11px; }
+    .profile-controls { display: flex; align-items: center; gap: 7px; }
+    .profile-controls .control { min-width: 170px; }
     .config-tabs { min-width: 0; display: flex; align-items: center; gap: 2px; overflow-x: auto; border-bottom: 1px solid var(--line-strong); }
     .config-tab { min-height: 38px; padding: 0 13px; border: 0; border-bottom: 3px solid transparent; background: transparent; color: #5d6964; white-space: nowrap; }
     .config-tab.active { border-bottom-color: var(--accent); color: var(--success); font-weight: 800; }
@@ -336,6 +342,9 @@
       .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .filters .button { width: 100%; }
       .config-toolbar { align-items: stretch; flex-direction: column; }
+      .profile-bar { align-items: stretch; flex-direction: column; }
+      .profile-controls { width: 100%; }
+      .profile-controls .control { min-width: 0; flex: 1; }
       .config-actions { justify-content: flex-end; }
       .config-layout { grid-template-columns: minmax(0, 1fr); }
       .config-list-panel { border-right: 0; border-bottom: 1px solid var(--line); }
@@ -511,6 +520,18 @@
           <div id="config-validity" class="page-meta">尚未校验</div>
         </div>
 
+        <div class="profile-bar">
+          <div class="profile-status">
+            <strong>当前运行平台：<span id="profile-active">正在读取</span></strong>
+            <span id="profile-pending">正在读取下次启动配置</span>
+          </div>
+          <div class="profile-controls">
+            <label class="field-label" for="profile-select">下次启动平台</label>
+            <select id="profile-select" class="control" disabled></select>
+            <button id="profile-save" class="button compact accent" type="button" disabled>保存平台</button>
+          </div>
+        </div>
+
         <div class="config-toolbar">
           <div id="config-tabs" class="config-tabs" role="tablist" aria-label="配置模块"></div>
           <div class="config-actions">
@@ -574,6 +595,7 @@
       config_functions: "/api/config/functions",
       config_sinks: "/api/config/sinks",
       config_bindings: "/api/config/bindings",
+      config_profile: "/api/config/profile",
       config_validate: "/api/config/validate",
       config_save: "/api/config/save",
       debug_bindings: "/api/debug/bindings",
@@ -605,6 +627,7 @@
       configDirty: false,
       configEditMode: "fields",
       configDraft: null,
+      profileStatus: null,
       eventSource: null
     };
 
@@ -1382,6 +1405,47 @@
       }
     }
 
+    async function loadProfileStatus() {
+      const status = await requestJson(state.routes.config_profile);
+      state.profileStatus = status;
+      element("profile-active").textContent = status.active_profile || "未设置";
+      element("profile-pending").textContent = status.restart_required
+        ? `已选择 ${status.selected_profile}，重启程序后生效`
+        : "当前运行配置与下次启动配置一致";
+      const select = element("profile-select");
+      select.innerHTML = "";
+      for (const profile of status.available_profiles || []) {
+        const option = document.createElement("option");
+        option.value = profile;
+        option.textContent = profile;
+        option.selected = profile === status.selected_profile;
+        select.appendChild(option);
+      }
+      const available = select.options.length > 0;
+      select.disabled = !available;
+      element("profile-save").disabled = !available;
+    }
+
+    async function saveProfile() {
+      const button = element("profile-save");
+      setBusy(button, true);
+      try {
+        const status = await requestJson(state.routes.config_profile, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ profile: element("profile-select").value })
+        });
+        state.profileStatus = status;
+        await loadProfileStatus();
+        showNotice(status.restart_required ? "平台配置已保存，重启程序后生效" : "当前已使用该平台配置", "success");
+      } catch (error) {
+        showNotice(error.message, "error");
+      } finally {
+        button.disabled = !element("profile-select").options.length;
+        button.setAttribute("aria-busy", "false");
+      }
+    }
+
     async function loadChainsOnly() {
       state.chains = await requestJson(state.routes.runtime_chain) || [];
       renderChains();
@@ -1550,6 +1614,7 @@
       element("config-refresh").addEventListener("click", () => loadConfigModule(state.selectedConfigId).catch(handleError));
       element("config-validate").addEventListener("click", validateConfig);
       element("config-save").addEventListener("click", saveConfig);
+      element("profile-save").addEventListener("click", saveProfile);
       element("config-search").addEventListener("input", renderConfigList);
       element("config-editor").addEventListener("input", () => setConfigDirty(true));
       element("config-json-toggle").addEventListener("click", toggleConfigJsonEditor);
@@ -1567,7 +1632,7 @@
       } catch (error) {
         showNotice(`接口表加载失败，使用默认路由：${error.message}`, "warning");
       }
-      const results = await Promise.allSettled([loadOverview(), loadRuntimeControlStatus(), loadDebugBindings()]);
+      const results = await Promise.allSettled([loadOverview(), loadRuntimeControlStatus(), loadDebugBindings(), loadProfileStatus()]);
       for (const result of results) {
         if (result.status === "rejected") handleError(result.reason);
       }

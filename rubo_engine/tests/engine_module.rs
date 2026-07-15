@@ -24,6 +24,59 @@ use tokio::{
 };
 
 #[tokio::test]
+#[cfg(not(feature = "hardware"))]
+async fn engine_registers_uart_source_and_sink_from_config() {
+    let mut config = RuboConfig::default();
+    config.sources_mut().insert(
+        "uart".to_string(),
+        SourceConfig::new("uart")
+            .kind("uart")
+            .set("serial", "test-uart")
+            .set("prefix", vec![170_u8])
+            .set("suffix", vec![85_u8])
+            .set("content_bytes", 1_usize),
+    );
+    config.sinks_mut().insert(
+        "uart".to_string(),
+        SinkConfig::new("uart")
+            .kind("uart")
+            .set("serial", "test-uart"),
+    );
+    let mut engine = Engine::new(".", AppConfig::default(), config);
+
+    let outputs = engine.run(1).await.unwrap();
+
+    assert!(engine.sinks().contains("uart"));
+    assert_eq!(outputs.len(), 1);
+    assert!(
+        outputs[0]
+            .source_result()
+            .as_ref()
+            .unwrap_err()
+            .to_string()
+            .contains("hardware feature is disabled")
+    );
+}
+
+#[tokio::test]
+async fn engine_registers_gpio_sink_from_config() {
+    let mut config = RuboConfig::default();
+    config.sinks_mut().insert(
+        "gpio".to_string(),
+        SinkConfig::new("gpio")
+            .kind("gpio")
+            .set("chip", 0_u8)
+            .set("run_pin", 27_u32)
+            .set("active_low", true),
+    );
+    let mut engine = Engine::new(".", AppConfig::default(), config);
+
+    engine.run(1).await.unwrap();
+
+    assert!(engine.sinks().contains("gpio"));
+}
+
+#[tokio::test]
 async fn function_aspect_runs_before_and_after_function() {
     let mut config = RuboConfig::default();
     config.sources_mut().insert(

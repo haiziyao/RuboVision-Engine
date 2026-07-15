@@ -15,7 +15,7 @@ pub fn save_update(
     config: &RuboConfig,
 ) -> Result<(), ConfigError> {
     let root = root.as_ref();
-    let config_path = root.join(app_config.config_path());
+    let config_path = root.join(app_config.config_dir());
     let span = info_span!(
         target: "rubo_engine::config::update",
         "config.update.save",
@@ -134,7 +134,7 @@ where
     F: FnOnce(&Path, &AppConfig, &RuboConfig) -> Result<(), ConfigError>,
 {
     let root = root.as_ref();
-    let config_path = root.join(app_config.config_path());
+    let config_path = root.join(app_config.config_dir());
     let span = info_span!(
         target: "rubo_engine::config::update",
         "config.update.save_module",

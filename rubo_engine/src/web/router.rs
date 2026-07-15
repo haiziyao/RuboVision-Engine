@@ -10,10 +10,10 @@ use crate::{
     web::api::{
         config, config_bindings, config_devices, config_functions, config_save, config_sinks,
         config_sources, config_validate, debug_bindings, debug_trigger, health, index, interface,
-        output_detail, outputs, outputs_latest, remove_source_api, runtime_chain,
+        output_detail, outputs, outputs_latest, profile_status, remove_source_api, runtime_chain,
         runtime_control_status, runtime_events, runtime_outputs_latest, runtime_restart,
         runtime_start, runtime_stop, runtime_summary, update_binding_api, update_device_api,
-        update_function_api, update_sink_api, update_source_api,
+        update_function_api, update_profile, update_sink_api, update_source_api,
     },
 };
 
@@ -40,6 +40,10 @@ pub fn build_router(state: WebState) -> Router {
         .route(routes.config_functions(), get(config_functions))
         .route(routes.config_sinks(), get(config_sinks))
         .route(routes.config_bindings(), get(config_bindings))
+        .route(
+            routes.config_profile(),
+            get(profile_status).put(update_profile),
+        )
         .route(
             &format!("{}/{{id}}", routes.config_sources()),
             put(update_source_api).delete(remove_source_api),
