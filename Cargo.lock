@@ -907,8 +907,9 @@ dependencies = [
 
 [[package]]
 name = "rubo_engine"
-version = "0.2.0"
-source = "git+https://github.com/haiziyao/RuboVision-Engine.git?branch=engine#eb681528f64556f2e3f94fcc958e68d448a72348"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3c1467d1a5bca80e2b5013abb38340717bc879ba44785b1a79990b11e00ca23a"
 dependencies = [
  "async-trait",
  "axum",
@@ -929,8 +930,9 @@ dependencies = [
 
 [[package]]
 name = "rubo_engine_macros"
-version = "0.1.0"
-source = "git+https://github.com/haiziyao/RuboVision-Engine.git?branch=engine#eb681528f64556f2e3f94fcc958e68d448a72348"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de50993bd5620183c7fd3032ae624441a90b3937cd093b37eec0ce01c395f900"
 dependencies = [
  "proc-macro2",
  "quote",
