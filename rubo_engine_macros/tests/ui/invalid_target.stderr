@@ -1,0 +1,5 @@
+error: `function` can only be used on a struct, enum, or union
+ --> tests/ui/invalid_target.rs:4:1
+  |
+4 | fn invalid_function_target() {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

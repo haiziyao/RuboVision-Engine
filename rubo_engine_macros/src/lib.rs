@@ -23,12 +23,30 @@ fn parse_args(attr: TokenStream) -> Result<AttributeArgs, TokenStream> {
 }
 
 fn string_arg(args: &AttributeArgs, name: &str) -> Result<String, TokenStream> {
+    let mut result = None;
     for meta in &args.args {
         let Meta::NameValue(name_value) = meta else {
-            continue;
+            return Err(
+                syn::Error::new_spanned(meta, format!("expected `{name} = \"...\"`"))
+                    .to_compile_error()
+                    .into(),
+            );
         };
         if !name_value.path.is_ident(name) {
-            continue;
+            return Err(syn::Error::new_spanned(
+                &name_value.path,
+                format!("unknown argument; expected `{name}`"),
+            )
+            .to_compile_error()
+            .into());
+        }
+        if result.is_some() {
+            return Err(syn::Error::new_spanned(
+                name_value,
+                format!("duplicate `{name}` argument"),
+            )
+            .to_compile_error()
+            .into());
         }
         let Expr::Lit(ExprLit {
             lit: Lit::Str(value),
@@ -42,15 +60,17 @@ fn string_arg(args: &AttributeArgs, name: &str) -> Result<String, TokenStream> {
             .to_compile_error()
             .into());
         };
-        return Ok(value.value());
+        result = Some(value.value());
     }
 
-    Err(syn::Error::new(
-        proc_macro2::Span::call_site(),
-        format!("missing `{name}` argument"),
-    )
-    .to_compile_error()
-    .into())
+    result.ok_or_else(|| {
+        syn::Error::new(
+            proc_macro2::Span::call_site(),
+            format!("missing `{name}` argument"),
+        )
+        .to_compile_error()
+        .into()
+    })
 }
 
 fn item_type_ident(item: &Item) -> Option<&Ident> {
@@ -76,7 +96,12 @@ fn register_source(attr: TokenStream, item: TokenStream) -> TokenStream {
         Err(error) => return error.to_compile_error().into(),
     };
     let Some(ident) = item_type_ident(&item) else {
-        return quote!(#item).into();
+        return syn::Error::new_spanned(
+            item,
+            "`source` can only be used on a struct, enum, or union",
+        )
+        .to_compile_error()
+        .into();
     };
 
     quote! {
@@ -106,7 +131,12 @@ fn register_device(attr: TokenStream, item: TokenStream) -> TokenStream {
         Err(error) => return error.to_compile_error().into(),
     };
     let Some(ident) = item_type_ident(&item) else {
-        return quote!(#item).into();
+        return syn::Error::new_spanned(
+            item,
+            "`device` can only be used on a struct, enum, or union",
+        )
+        .to_compile_error()
+        .into();
     };
 
     quote! {
@@ -136,7 +166,12 @@ fn register_function(attr: TokenStream, item: TokenStream) -> TokenStream {
         Err(error) => return error.to_compile_error().into(),
     };
     let Some(ident) = item_type_ident(&item) else {
-        return quote!(#item).into();
+        return syn::Error::new_spanned(
+            item,
+            "`function` can only be used on a struct, enum, or union",
+        )
+        .to_compile_error()
+        .into();
     };
 
     quote! {
@@ -166,7 +201,12 @@ fn register_sink(attr: TokenStream, item: TokenStream) -> TokenStream {
         Err(error) => return error.to_compile_error().into(),
     };
     let Some(ident) = item_type_ident(&item) else {
-        return quote!(#item).into();
+        return syn::Error::new_spanned(
+            item,
+            "`sink` can only be used on a struct, enum, or union",
+        )
+        .to_compile_error()
+        .into();
     };
 
     quote! {

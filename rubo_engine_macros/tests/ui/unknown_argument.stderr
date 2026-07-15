@@ -1,0 +1,5 @@
+error: unknown argument; expected `id`
+ --> tests/ui/unknown_argument.rs:3:28
+  |
+3 | #[function(id = "invalid", wrong = "value")]
+  |                            ^^^^^

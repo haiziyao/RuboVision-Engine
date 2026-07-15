@@ -15,5 +15,9 @@ Source -> Message -> Binding -> Function -> Sink
 - Implement `Sink` to receive outputs.
 - Optional `Device` values are shared through `DeviceHandle<T>`.
 - Web Debug Console is enabled by default.
+- `FunctionAspect` can run application-defined behavior before and after each function call.
+- The optional `hardware` feature provides the built-in UART source and sink implementation.
+- Registration macros register runtime types; application code still declares concrete config instances and bindings.
 
-See the repository docs for the full first-use guide.
+See [Config](doc/config.md) for config loading and profile directories, and
+[UART Message Protocol](doc/message.md) for serial framing.

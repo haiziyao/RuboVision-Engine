@@ -552,6 +552,40 @@ fn store_generates_active_config_when_config_files_are_missing() {
 }
 
 #[test]
+fn store_generates_active_config_inside_selected_profile() {
+    let _guard = WRITER_TEST_LOCK.lock().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let app_config: AppConfig = serde_json::from_value(serde_json::json!({
+        "config_path": "config",
+        "profile": "orangepi"
+    }))
+    .unwrap();
+    let declared = sample_rubo_config(1000);
+
+    ConfigStore::load_or_init_config(temp.path(), &app_config, &declared).unwrap();
+
+    assert!(temp.path().join("config/orangepi/source.json").exists());
+    assert!(!temp.path().join("config/source.json").exists());
+}
+
+#[test]
+fn update_save_writes_active_config_inside_selected_profile() {
+    let _guard = WRITER_TEST_LOCK.lock().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let app_config: AppConfig = serde_json::from_value(serde_json::json!({
+        "config_path": "config",
+        "profile": "raspberrypi"
+    }))
+    .unwrap();
+    let config = sample_rubo_config(1000);
+
+    save_update(temp.path(), &app_config, &config).unwrap();
+
+    assert!(temp.path().join("config/raspberrypi/source.json").exists());
+    assert!(!temp.path().join("config/source.json").exists());
+}
+
+#[test]
 fn store_accepts_matching_active_config() {
     let _guard = WRITER_TEST_LOCK.lock().unwrap();
     let temp = tempfile::tempdir().unwrap();
@@ -596,6 +630,27 @@ fn store_rejects_mismatched_active_config_and_writes_code_config_snapshot() {
     let snapshot =
         ConfigStore::load_active_config(temp.path().join("config").join("code_config")).unwrap();
     assert_eq!(snapshot, declared);
+}
+
+#[test]
+fn store_writes_mismatch_snapshot_inside_selected_profile() {
+    let _guard = WRITER_TEST_LOCK.lock().unwrap();
+    let temp = tempfile::tempdir().unwrap();
+    let app_config: AppConfig = serde_json::from_value(serde_json::json!({
+        "config_path": "config",
+        "profile": "orangepi"
+    }))
+    .unwrap();
+    let active = sample_rubo_config(1000);
+    let declared = sample_rubo_config(2000);
+    let profile_dir = temp.path().join("config/orangepi");
+    ConfigWriter::write_active_config(&profile_dir, &app_config, &active).unwrap();
+
+    let error = ConfigStore::load_or_init_config(temp.path(), &app_config, &declared).unwrap_err();
+
+    assert!(matches!(error, ConfigError::ConfigMismatch { .. }));
+    assert!(profile_dir.join("code_config/source.json").exists());
+    assert!(!temp.path().join("config/code_config").exists());
 }
 
 #[test]

@@ -59,7 +59,7 @@ async fn engine_registers_uart_source_and_sink_from_config() {
 }
 
 #[tokio::test]
-async fn engine_registers_gpio_sink_from_config() {
+async fn engine_leaves_application_gpio_sink_unregistered() {
     let mut config = RuboConfig::default();
     config.sinks_mut().insert(
         "gpio".to_string(),
@@ -71,9 +71,17 @@ async fn engine_registers_gpio_sink_from_config() {
     );
     let mut engine = Engine::new(".", AppConfig::default(), config);
 
-    engine.run(1).await.unwrap();
+    let error = match engine.run(1).await {
+        Ok(_) => panic!("gpio sink should not be registered by rubo_engine"),
+        Err(error) => error,
+    };
 
-    assert!(engine.sinks().contains("gpio"));
+    assert!(!engine.sinks().contains("gpio"));
+    let message = error.to_string();
+    assert!(
+        message.contains("gpio") && message.contains("not registered"),
+        "{message}"
+    );
 }
 
 #[tokio::test]

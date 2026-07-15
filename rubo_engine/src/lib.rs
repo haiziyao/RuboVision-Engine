@@ -39,8 +39,8 @@ pub use runtime::{
     run_source_messages,
 };
 pub use sink::{
-    ChannelSink, ChannelSinkFactory, GpioSink, GpioSinkFactory, Sink, SinkFactory, SinkRegister,
-    SinkRouteResult, SinkRouteState, UartSink, UartSinkFactory, route_output,
+    ChannelSink, ChannelSinkFactory, Sink, SinkFactory, SinkRegister, SinkRouteResult,
+    SinkRouteState, UartSink, UartSinkFactory, route_output,
 };
 pub use source::{
     ChannelSource, ChannelSourceFactory, IntervalSource, IntervalSourceFactory, ManualSource,
