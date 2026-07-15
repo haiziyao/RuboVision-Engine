@@ -1,6 +1,6 @@
 [package]
 name = "rubo_engine"
-version = "0.2.0"
+version = "0.3.0"
 edition.workspace = true
 license.workspace = true
 description = "A pure Rust core runtime framework for source-device-function-sink pipelines."
@@ -20,7 +20,7 @@ config = "0.15"
 futures = "0.3"
 inventory = "0.3"
 owo-colors = "4"
-rubo_engine_macros = { version = "0.1.0", path = "../rubo_engine_macros" }
+rubo_engine_macros = { version = "0.1.1", path = "../rubo_engine_macros" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 serde_yaml_bw = "2.5"

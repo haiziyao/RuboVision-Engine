@@ -2,7 +2,7 @@
 
 `rubo_engine` is an experimental pure Rust core runtime for building source-device-function-sink pipelines.
 
-Version `0.2.0` is an early public release. APIs may change significantly before `1.0`.
+Version `0.3.0` is an early public release. APIs may change significantly before `1.0`.
 
 ## Minimal Shape
 
