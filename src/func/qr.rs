@@ -14,7 +14,7 @@ impl Function for QrDetect {
             .function_config()
             .get_or("device_id", "camera".to_string())?;
         let camera = call.devices().get::<CameraDevice>(&device_id)?;
-        run_qr_detect(camera, call.function_config()).await
+        run_qr_detect(camera, call.function_config(), call.image_enabled()).await
     }
 }
 
@@ -22,6 +22,7 @@ impl Function for QrDetect {
 async fn run_qr_detect(
     _camera: std::sync::Arc<CameraDevice>,
     _config: &rubo_engine::config::FuncConfig,
+    _image_enabled: bool,
 ) -> Result<FuncResult, FunctionError> {
     Err(FunctionError::Call {
         message: crate::tool::opencv_disabled_message("qr_detect"),
@@ -32,6 +33,7 @@ async fn run_qr_detect(
 async fn run_qr_detect(
     camera: std::sync::Arc<CameraDevice>,
     config: &rubo_engine::config::FuncConfig,
+    image_enabled: bool,
 ) -> Result<FuncResult, FunctionError> {
     let output = qr_detect_output(camera, config).await?;
     if output.value.is_empty() {
@@ -39,15 +41,18 @@ async fn run_qr_detect(
             message: "qr code not found before loop_count was reached".to_string(),
         });
     }
-    let image =
-        crate::tool::mat_to_jpeg_data_url(&output.frame).map_err(|error| FunctionError::Call {
-            message: error.to_string(),
-        })?;
-    Ok(FuncResult::new(serde_json::json!({
+    let mut result = serde_json::json!({
         "text": format!("qr_detect finished: {}", output.value),
-        "value": output.value,
-        "image": image
-    })))
+        "value": output.value
+    });
+    if image_enabled {
+        result["image"] = crate::tool::mat_to_jpeg_data_url(&output.frame)
+            .map(serde_json::Value::String)
+            .map_err(|error| FunctionError::Call {
+                message: error.to_string(),
+            })?;
+    }
+    Ok(FuncResult::new(result))
 }
 
 #[cfg(feature = "opencv")]
@@ -82,7 +87,7 @@ mod tests {
         let mut devices = FunctionDevices::new();
         devices.insert("camera", &camera);
         let message = Message::new("test_qr");
-        let call = FunctionCall::new(&config.funcs()["qr_detect"], &message, devices);
+        let call = FunctionCall::new(&config.funcs()["qr_detect"], &message, devices, true);
         let result = QrDetect.call(call).await.expect("run qr function");
         println!("qr value={}", result.value()["value"]);
     }

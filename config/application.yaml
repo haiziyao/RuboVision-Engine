@@ -5,6 +5,7 @@ profile: orangepi
 config_format: toml
 web:
   enabled: true
+  output_image: true
   host: 0.0.0.0
   port: 3888
 log:

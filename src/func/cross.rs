@@ -20,7 +20,13 @@ impl Function for CrossDetect {
             .and_then(serde_json::Value::as_u64)
             .unwrap_or(0) as u8;
         let camera = call.devices().get::<CameraDevice>(&device_id)?;
-        run_cross_detect(camera, runtime_param, call.function_config()).await
+        run_cross_detect(
+            camera,
+            runtime_param,
+            call.function_config(),
+            call.image_enabled(),
+        )
+        .await
     }
 }
 
@@ -29,6 +35,7 @@ async fn run_cross_detect(
     _camera: std::sync::Arc<CameraDevice>,
     _runtime_param: u8,
     _config: &rubo_engine::config::FuncConfig,
+    _image_enabled: bool,
 ) -> Result<FuncResult, FunctionError> {
     Err(FunctionError::Call {
         message: crate::tool::opencv_disabled_message("cross"),
@@ -40,17 +47,21 @@ async fn run_cross_detect(
     camera: std::sync::Arc<CameraDevice>,
     runtime_param: u8,
     config: &rubo_engine::config::FuncConfig,
+    image_enabled: bool,
 ) -> Result<FuncResult, FunctionError> {
     let output = cross_output(camera, runtime_param, config).await?;
-    let image =
-        crate::tool::mat_to_jpeg_data_url(&output.frame).map_err(|error| FunctionError::Call {
-            message: error.to_string(),
-        })?;
-    Ok(FuncResult::new(serde_json::json!({
+    let mut result = serde_json::json!({
         "text": format!("cross finished: {}", output.value),
-        "value": output.value,
-        "image": image
-    })))
+        "value": output.value
+    });
+    if image_enabled {
+        result["image"] = crate::tool::mat_to_jpeg_data_url(&output.frame)
+            .map(serde_json::Value::String)
+            .map_err(|error| FunctionError::Call {
+                message: error.to_string(),
+            })?;
+    }
+    Ok(FuncResult::new(result))
 }
 
 #[cfg(feature = "opencv")]
@@ -103,7 +114,7 @@ mod tests {
         let message = Message::new("test_cross").payload(serde_json::json!({
             "runtime_param": 0
         }));
-        let call = FunctionCall::new(&config.funcs()["cross"], &message, devices);
+        let call = FunctionCall::new(&config.funcs()["cross"], &message, devices, true);
         let result = CrossDetect.call(call).await.expect("run cross function");
         println!("cross value={}", result.value()["value"]);
     }

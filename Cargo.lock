@@ -907,9 +907,9 @@ dependencies = [
 
 [[package]]
 name = "rubo_engine"
-version = "0.3.0"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3c1467d1a5bca80e2b5013abb38340717bc879ba44785b1a79990b11e00ca23a"
+checksum = "37bc0d4d0b95fca3def72084bab096c33773f9e4ffa2774a78444395a34f47bb"
 dependencies = [
  "async-trait",
  "axum",

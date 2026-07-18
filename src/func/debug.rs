@@ -13,11 +13,16 @@ impl Function for DebugFun {
             .function_config()
             .get_or("message", "debug".to_string())?;
         let result = format!("{message} success");
-        Ok(FuncResult::new(json!({
+        let mut output = json!({
             "text": result.clone(),
-            "value": result,
-            "image": "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360' viewBox='0 0 640 360'%3E%3Crect width='640' height='360' fill='%23263d39'/%3E%3Crect x='24' y='24' width='592' height='312' fill='%23ffffff'/%3E%3Ctext x='320' y='190' text-anchor='middle' font-family='Arial' font-size='38' fill='%231c765e'%3Edebug success%3C/text%3E%3C/svg%3E"
-        })))
+            "value": result
+        });
+        if call.image_enabled() {
+            output["image"] = json!(
+                "data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='360' viewBox='0 0 640 360'%3E%3Crect width='640' height='360' fill='%23263d39'/%3E%3Crect x='24' y='24' width='592' height='312' fill='%23ffffff'/%3E%3Ctext x='320' y='190' text-anchor='middle' font-family='Arial' font-size='38' fill='%231c765e'%3Edebug success%3C/text%3E%3C/svg%3E"
+            );
+        }
+        Ok(FuncResult::new(output))
     }
 }
 
@@ -34,7 +39,7 @@ mod tests {
         let config = default_rubo_config(&app_config).expect("load default config");
         let function_config = &config.funcs()["debug_fun"];
         let message = Message::new("debug");
-        let call = FunctionCall::new(function_config, &message, FunctionDevices::new());
+        let call = FunctionCall::new(function_config, &message, FunctionDevices::new(), true);
 
         let result = DebugFun.call(call).await.expect("debug function");
 
