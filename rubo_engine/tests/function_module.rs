@@ -24,7 +24,7 @@ fn function_register_stores_and_returns_function_by_id() {
     let camera = DeviceRef::shared("camera", Camera { value: 4 });
     let mut devices = FunctionDevices::new();
     devices.insert("camera", &camera);
-    let function_call = FunctionCall::new(&config, &message, devices);
+    let function_call = FunctionCall::new(&config, &message, devices, true);
 
     let function = register.get("scale").unwrap();
     let result = block_on(function.call(function_call)).unwrap();
@@ -40,7 +40,7 @@ fn function_call_reads_config_message_and_limited_devices() {
     let mut devices = FunctionDevices::new();
     devices.insert("camera", &camera);
     let message = Message::new("scale").payload(json!({ "value": 3 }));
-    let function_call = FunctionCall::new(&config, &message, devices);
+    let function_call = FunctionCall::new(&config, &message, devices, true);
 
     let factor: i64 = function_call.function_config().get("factor").unwrap();
     let message_value = function_call.message().payload_ref()["value"]
@@ -54,6 +54,15 @@ fn function_call_reads_config_message_and_limited_devices() {
 }
 
 #[test]
+fn function_call_exposes_image_output_decision() {
+    let config = FuncConfig::new("image");
+    let message = Message::new("image");
+    let function_call = FunctionCall::new(&config, &message, FunctionDevices::new(), true);
+
+    assert!(function_call.image_enabled());
+}
+
+#[test]
 fn function_register_holds_shared_function_for_concurrent_calls() {
     let function = FunctionRefCounter::new();
     let calls = function.calls.clone();
@@ -62,8 +71,8 @@ fn function_register_holds_shared_function_for_concurrent_calls() {
     let config = FuncConfig::new("count");
     let message_one = Message::new("count").payload(json!({}));
     let message_two = Message::new("count").payload(json!({}));
-    let function_call_one = FunctionCall::new(&config, &message_one, FunctionDevices::new());
-    let function_call_two = FunctionCall::new(&config, &message_two, FunctionDevices::new());
+    let function_call_one = FunctionCall::new(&config, &message_one, FunctionDevices::new(), true);
+    let function_call_two = FunctionCall::new(&config, &message_two, FunctionDevices::new(), true);
 
     let function_one = register.get("count").unwrap();
     let function_two = register.get("count").unwrap();

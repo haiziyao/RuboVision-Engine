@@ -52,6 +52,7 @@ pub struct FunctionCall<'a> {
     function_config: &'a FuncConfig,
     message: &'a Message,
     devices: FunctionDevices<'a>,
+    image_enabled: bool,
 }
 
 impl<'a> FunctionCall<'a> {
@@ -59,11 +60,13 @@ impl<'a> FunctionCall<'a> {
         function_config: &'a FuncConfig,
         message: &'a Message,
         devices: FunctionDevices<'a>,
+        image_enabled: bool,
     ) -> Self {
         Self {
             function_config,
             message,
             devices,
+            image_enabled,
         }
     }
 
@@ -77,6 +80,10 @@ impl<'a> FunctionCall<'a> {
 
     pub fn devices(&self) -> &FunctionDevices<'a> {
         &self.devices
+    }
+
+    pub fn image_enabled(&self) -> bool {
+        self.image_enabled
     }
 }
 

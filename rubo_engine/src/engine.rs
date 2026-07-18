@@ -189,6 +189,7 @@ impl Engine {
             .map_err(|error| RuntimeError::ConfigInvalid {
                 message: error.to_string(),
             })?;
+        let image_enabled = self.app_config.web().enabled() && self.app_config.web().output_image();
         run_config_with_resources(
             &config,
             &self.source_register,
@@ -196,6 +197,7 @@ impl Engine {
             &self.device_register,
             &self.functions,
             &self.sinks,
+            image_enabled,
             channel_size,
         )
         .await

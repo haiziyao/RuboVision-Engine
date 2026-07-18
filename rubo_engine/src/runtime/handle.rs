@@ -11,6 +11,7 @@ pub async fn handle_message(
     functions: &FunctionRegister,
     devices: &DevicePool,
     sinks: &SinkRegister,
+    image_enabled: bool,
 ) -> RuntimeOutput {
     let source_id = source_id.into();
     let key = message.key().to_string();
@@ -25,7 +26,7 @@ pub async fn handle_message(
             ))
         );
         let dispatch_output = dispatch(config, DispatchMessage::new(source_id, message));
-        let output = execute(dispatch_output, config, functions, devices).await;
+        let output = execute(dispatch_output, config, functions, devices, image_enabled).await;
         let sink_results = route_output(&output, config, sinks).await;
         RuntimeOutput::new(output, sink_results)
     }

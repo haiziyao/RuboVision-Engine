@@ -15,6 +15,7 @@ config_format: toml
 
 web:
   enabled: true
+  output_image: true
   host: 0.0.0.0
   port: 3888
 
@@ -27,6 +28,9 @@ log:
 - `profile` selects one directory below `config_path`.
 - An empty `profile` keeps the original single-directory layout.
 - `config_format` controls generated pipeline files and supports `json`, `toml`, and `yaml`.
+- `web.output_image` tells visual Functions whether a Web-bound result needs image data. It
+  defaults to `true`. When Web is disabled, this field is `false`, or a Binding has no `web` Sink,
+  `FunctionCall::image_enabled()` returns `false` so the Function can skip image encoding.
 
 ## Profile layout
 

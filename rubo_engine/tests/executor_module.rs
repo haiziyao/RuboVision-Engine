@@ -49,7 +49,13 @@ fn execute_runs_task_request_and_returns_success_output() {
         ),
     );
 
-    let output = block_on(execute(dispatch_output, &config, &functions, &devices));
+    let output = block_on(execute(
+        dispatch_output,
+        &config,
+        &functions,
+        &devices,
+        true,
+    ));
 
     assert_eq!(output.route().binding_id(), Some("binding"));
     assert_eq!(output.route().func_id(), Some("scale"));
@@ -72,6 +78,7 @@ fn execute_wraps_dispatch_error_as_output_error() {
         &RuboConfig::default(),
         &FunctionRegister::new(),
         &DevicePool::new(),
+        false,
     ));
 
     assert_eq!(output.route().binding_id(), None);
@@ -106,12 +113,72 @@ fn execute_returns_runtime_error_when_function_is_missing() {
         &config,
         &FunctionRegister::new(),
         &DevicePool::new(),
+        false,
     ));
 
     match output.state() {
         OutputState::Success(_) => panic!("unexpected success output"),
         OutputState::Error(error) => assert_eq!(error.kind(), &OutputErrorKind::Runtime),
     }
+}
+
+#[test]
+fn execute_enables_image_when_output_image_and_web_sink_are_enabled() {
+    let output = execute_image_decision(true, true);
+
+    match output.state() {
+        OutputState::Success(result) => assert_eq!(result.value()["image_enabled"], true),
+        OutputState::Error(error) => panic!("unexpected output error: {}", error.message()),
+    }
+}
+
+#[test]
+fn execute_disables_image_when_output_image_is_disabled() {
+    let output = execute_image_decision(false, true);
+
+    match output.state() {
+        OutputState::Success(result) => assert_eq!(result.value()["image_enabled"], false),
+        OutputState::Error(error) => panic!("unexpected output error: {}", error.message()),
+    }
+}
+
+#[test]
+fn execute_disables_image_when_binding_has_no_web_sink() {
+    let output = execute_image_decision(true, false);
+
+    match output.state() {
+        OutputState::Success(result) => assert_eq!(result.value()["image_enabled"], false),
+        OutputState::Error(error) => panic!("unexpected output error: {}", error.message()),
+    }
+}
+
+fn execute_image_decision(output_image: bool, web_sink: bool) -> rubo_engine::Output {
+    let mut binding = BindingConfig::new("binding")
+        .source("source", "frame")
+        .func("image_decision");
+    if web_sink {
+        binding = binding.sink("web");
+    }
+    let mut config = RuboConfig::default();
+    config.bindings_mut().insert("binding".to_string(), binding);
+    config.funcs_mut().insert(
+        "image_decision".to_string(),
+        FuncConfig::new("image_decision"),
+    );
+    let mut functions = FunctionRegister::new();
+    functions.register("image_decision", ImageDecisionFunction);
+    let dispatch_output = dispatch(
+        &config,
+        DispatchMessage::new("source", Message::new("frame")),
+    );
+
+    block_on(execute(
+        dispatch_output,
+        &config,
+        &functions,
+        &DevicePool::new(),
+        output_image,
+    ))
 }
 
 struct Camera {
@@ -140,6 +207,17 @@ impl Function for ScaleFunction {
         Ok(FuncResult::new(
             json!({ "value": value * factor * camera.value }),
         ))
+    }
+}
+
+struct ImageDecisionFunction;
+
+#[async_trait]
+impl Function for ImageDecisionFunction {
+    async fn call(&self, function_call: FunctionCall<'_>) -> Result<FuncResult, FunctionError> {
+        Ok(FuncResult::new(json!({
+            "image_enabled": function_call.image_enabled()
+        })))
     }
 }
 

@@ -86,6 +86,7 @@ impl ConfigFileFormat {
 #[serde(default)]
 pub struct AppWebConfig {
     enabled: bool,
+    output_image: bool,
     host: String,
     port: u16,
 }
@@ -94,6 +95,7 @@ impl Default for AppWebConfig {
     fn default() -> Self {
         Self {
             enabled: true,
+            output_image: true,
             host: "127.0.0.1".to_string(),
             port: 3888,
         }
@@ -103,6 +105,10 @@ impl Default for AppWebConfig {
 impl AppWebConfig {
     pub fn enabled(&self) -> bool {
         self.enabled
+    }
+
+    pub fn output_image(&self) -> bool {
+        self.output_image
     }
 
     pub fn host(&self) -> &str {

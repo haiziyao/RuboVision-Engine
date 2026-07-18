@@ -16,6 +16,7 @@ pub async fn run_config(
     device_register: &DeviceRegister,
     functions: &FunctionRegister,
     sinks: &SinkRegister,
+    image_enabled: bool,
     channel_size: usize,
 ) -> Result<Vec<SourceRunOutput>, RuntimeError> {
     async move {
@@ -39,6 +40,7 @@ pub async fn run_config(
             functions,
             &devices,
             sinks,
+            image_enabled,
         )
         .await;
         info!(
@@ -58,6 +60,7 @@ pub async fn run_config_with_resources(
     device_register: &DeviceRegister,
     functions: &FunctionRegister,
     sinks: &SinkRegister,
+    image_enabled: bool,
     channel_size: usize,
 ) -> Result<Vec<SourceRunOutput>, RuntimeError> {
     async move {
@@ -82,6 +85,7 @@ pub async fn run_config_with_resources(
             functions,
             &devices,
             sinks,
+            image_enabled,
         )
         .await;
         info!(
@@ -199,6 +203,7 @@ pub async fn run_config_sources(
     functions: &FunctionRegister,
     devices: &DevicePool,
     sinks: &SinkRegister,
+    image_enabled: bool,
 ) -> Vec<SourceRunOutput> {
     async move {
         let mut build_errors = Vec::new();
@@ -214,6 +219,7 @@ pub async fn run_config_sources(
                     functions,
                     devices,
                     sinks,
+                    image_enabled,
                 )),
                 Err(error) => {
                     info!(
@@ -248,6 +254,7 @@ pub async fn run_config_sources_with_resources(
     functions: &FunctionRegister,
     devices: &DevicePool,
     sinks: &SinkRegister,
+    image_enabled: bool,
 ) -> Vec<SourceRunOutput> {
     async move {
         let mut build_errors = Vec::new();
@@ -263,6 +270,7 @@ pub async fn run_config_sources_with_resources(
                     functions,
                     devices,
                     sinks,
+                    image_enabled,
                 )),
                 Err(error) => {
                     info!(
@@ -298,6 +306,7 @@ pub async fn run_source(
     functions: &FunctionRegister,
     devices: &DevicePool,
     sinks: &SinkRegister,
+    image_enabled: bool,
 ) -> SourceRunOutput {
     let source_id = source_id.into();
     let source_span_id = source_id.clone();
@@ -314,8 +323,15 @@ pub async fn run_source(
             drop(source);
             result
         };
-        let messages_future =
-            run_source_messages(&source_id, receiver, config, functions, devices, sinks);
+        let messages_future = run_source_messages(
+            &source_id,
+            receiver,
+            config,
+            functions,
+            devices,
+            sinks,
+            image_enabled,
+        );
         let (source_result, runtime_outputs) = tokio::join!(source_future, messages_future);
         info!(
             "{}",
@@ -338,6 +354,7 @@ pub async fn run_source_messages(
     functions: &FunctionRegister,
     devices: &DevicePool,
     sinks: &SinkRegister,
+    image_enabled: bool,
 ) -> Vec<RuntimeOutput> {
     let source_id = source_id.into();
     let source_span_id = source_id.clone();
@@ -378,6 +395,7 @@ pub async fn run_source_messages(
                                     functions,
                                     devices,
                                     sinks,
+                                    image_enabled,
                                 )
                                 .await;
                                 (sequence, output)

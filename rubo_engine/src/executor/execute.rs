@@ -17,10 +17,13 @@ pub async fn execute(
     config: &RuboConfig,
     functions: &FunctionRegister,
     devices: &DevicePool,
+    image_enabled: bool,
 ) -> Output {
     async move {
         match dispatch_output {
-            DispatchOutput::Task(task) => execute_task(task, config, functions, devices).await,
+            DispatchOutput::Task(task) => {
+                execute_task(task, config, functions, devices, image_enabled).await
+            }
             DispatchOutput::Error(error) => {
                 info!(
                     "{}",
@@ -56,6 +59,7 @@ async fn execute_task(
     config: &RuboConfig,
     functions: &FunctionRegister,
     devices: &DevicePool,
+    image_enabled: bool,
 ) -> Output {
     let span_binding_id = task.binding_id().to_string();
     let span_func_id = task.func_id().to_string();
@@ -118,7 +122,17 @@ async fn execute_task(
             aspect.before(&task).await;
         }
 
-        let function_call = FunctionCall::new(function_config, task.message(), function_devices);
+        let image_enabled = image_enabled
+            && task
+                .sink_ids()
+                .iter()
+                .any(|sink_id| sink_id == crate::WEB_SINK_ID);
+        let function_call = FunctionCall::new(
+            function_config,
+            task.message(),
+            function_devices,
+            image_enabled,
+        );
         let function_result = AssertUnwindSafe(function.call(function_call))
             .catch_unwind()
             .await;

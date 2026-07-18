@@ -254,6 +254,52 @@ async fn engine_run_is_the_main_runtime_orchestration_entry() {
     }
 }
 
+#[tokio::test]
+async fn engine_disables_function_images_from_app_web_config() {
+    let app_config: AppConfig = serde_json::from_value(json!({
+        "web": {
+            "enabled": true,
+            "output_image": false
+        }
+    }))
+    .unwrap();
+    let mut config = RuboConfig::default();
+    config.sources_mut().insert(
+        "input".to_string(),
+        SourceConfig::new("input").kind("channel"),
+    );
+    config.funcs_mut().insert(
+        "image_decision".to_string(),
+        FuncConfig::new("image_decision"),
+    );
+    config
+        .sinks_mut()
+        .insert("web".to_string(), SinkConfig::new("web").kind("channel"));
+    config.bindings_mut().insert(
+        "binding".to_string(),
+        BindingConfig::new("binding")
+            .source("input", "frame")
+            .func("image_decision")
+            .sink("web"),
+    );
+    let (sender, receiver) = mpsc::channel(1);
+    sender.send(Message::new("frame")).await.unwrap();
+    drop(sender);
+    let (sink_sender, _sink_receiver) = mpsc::channel(1);
+    let mut engine = Engine::new(".", app_config, config);
+    engine.insert_source_channel("input", receiver);
+    engine.insert_sink_channel("web", sink_sender);
+    engine.register_function("image_decision", ImageDecisionFunction);
+
+    let results = engine.run(1).await.unwrap();
+    let output = results[0].runtime_outputs()[0].output();
+
+    match output.state() {
+        OutputState::Success(result) => assert_eq!(result.value()["image_enabled"], false),
+        OutputState::Error(error) => panic!("unexpected output error: {}", error.message()),
+    }
+}
+
 #[test]
 fn engine_prepare_web_keeps_generated_entries_out_of_user_config() {
     let mut config = RuboConfig::default();
@@ -608,6 +654,17 @@ struct DebugFunction;
 impl Function for DebugFunction {
     async fn call(&self, _function_call: FunctionCall<'_>) -> Result<FuncResult, FunctionError> {
         Ok(FuncResult::new(json!({ "text": "debug success" })))
+    }
+}
+
+struct ImageDecisionFunction;
+
+#[async_trait]
+impl Function for ImageDecisionFunction {
+    async fn call(&self, function_call: FunctionCall<'_>) -> Result<FuncResult, FunctionError> {
+        Ok(FuncResult::new(json!({
+            "image_enabled": function_call.image_enabled()
+        })))
     }
 }
 

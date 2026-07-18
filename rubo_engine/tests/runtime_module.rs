@@ -42,6 +42,7 @@ fn handle_message_runs_dispatch_execute_and_sink_route() {
         &functions,
         &devices,
         &sinks,
+        false,
     ));
 
     assert_eq!(result.output().route().binding_id(), Some("binding"));
@@ -70,6 +71,7 @@ fn handle_message_wraps_dispatch_error_without_running_sinks() {
         &FunctionRegister::new(),
         &DevicePool::new(),
         &SinkRegister::new(),
+        false,
     ));
 
     assert_eq!(result.output().route().source_id(), "source");
@@ -104,7 +106,7 @@ fn run_source_messages_handles_messages_until_channel_closes() {
     drop(sender);
 
     let results = block_on(run_source_messages(
-        "source", receiver, &config, &functions, &devices, &sinks,
+        "source", receiver, &config, &functions, &devices, &sinks, false,
     ));
 
     assert_eq!(results.len(), 2);
@@ -150,6 +152,7 @@ async fn run_source_messages_handles_same_source_messages_concurrently() {
             &functions,
             &devices,
             &SinkRegister::new(),
+            false,
         ),
     )
     .await
@@ -181,6 +184,7 @@ async fn run_source_injects_sender_and_connects_handler_to_runtime() {
         &functions,
         &devices,
         &sinks,
+        false,
     )
     .await;
 
@@ -206,8 +210,16 @@ async fn run_config_sources_builds_and_runs_registered_sources() {
     sinks.register("web", CountingSink::new(sink_calls.clone()));
     sinks.register("audit", CountingSink::new(sink_calls.clone()));
 
-    let results =
-        run_config_sources(&source_register, 1, &config, &functions, &devices, &sinks).await;
+    let results = run_config_sources(
+        &source_register,
+        1,
+        &config,
+        &functions,
+        &devices,
+        &sinks,
+        false,
+    )
+    .await;
 
     assert_eq!(results.len(), 2);
     assert!(results.iter().all(|result| matches!(
@@ -244,6 +256,7 @@ async fn run_config_builds_device_pool_and_runs_config_sources() {
         &device_register,
         &functions,
         &sinks,
+        false,
         1,
     )
     .await
@@ -265,6 +278,7 @@ async fn run_config_returns_runtime_error_when_device_pool_cannot_build() {
         &DeviceRegister::new(),
         &FunctionRegister::new(),
         &SinkRegister::new(),
+        false,
         1,
     )
     .await
@@ -292,6 +306,7 @@ async fn run_config_returns_runtime_error_when_config_reference_is_invalid() {
         &DeviceRegister::new(),
         &FunctionRegister::new(),
         &SinkRegister::new(),
+        false,
         1,
     )
     .await
@@ -321,6 +336,7 @@ async fn run_config_returns_runtime_error_when_source_kind_is_missing() {
         &DeviceRegister::new(),
         &FunctionRegister::new(),
         &SinkRegister::new(),
+        false,
         1,
     )
     .await
@@ -345,6 +361,7 @@ async fn run_config_returns_runtime_error_when_source_kind_is_not_registered() {
         &DeviceRegister::new(),
         &FunctionRegister::new(),
         &SinkRegister::new(),
+        false,
         1,
     )
     .await
@@ -377,6 +394,7 @@ async fn run_config_routes_function_registration_error_to_binding_sinks() {
         &device_register,
         &FunctionRegister::new(),
         &sinks,
+        false,
         1,
     )
     .await
@@ -423,6 +441,7 @@ async fn run_config_returns_runtime_error_when_sink_kind_is_missing() {
         &device_register,
         &functions,
         &sinks,
+        false,
         1,
     )
     .await
@@ -453,6 +472,7 @@ async fn run_config_records_sink_registration_error_in_route_results() {
         &device_register,
         &functions,
         &SinkRegister::new(),
+        false,
         1,
     )
     .await
@@ -518,6 +538,7 @@ async fn run_config_with_resources_runs_channel_source_and_channel_sink() {
         &device_register,
         &functions,
         &sink_register,
+        false,
         1,
     )
     .await

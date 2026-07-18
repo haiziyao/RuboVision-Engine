@@ -12,6 +12,7 @@ fn app_config_defaults_to_config_directory() {
     assert_eq!(config.config_dir(), Path::new("config"));
     assert_eq!(config.config_format(), ConfigFileFormat::Json);
     assert!(config.web().enabled());
+    assert!(config.web().output_image());
     assert_eq!(config.web().host(), "127.0.0.1");
     assert_eq!(config.web().port(), 3888);
     assert!(config.log().enabled());
@@ -31,6 +32,7 @@ fn app_config_loads_application_file() {
 
             [web]
             enabled = false
+            output_image = false
             host = "0.0.0.0"
             port = 18080
 
@@ -49,6 +51,7 @@ fn app_config_loads_application_file() {
     assert_eq!(config.config_dir(), Path::new("custom_config/orangepi"));
     assert_eq!(config.config_format(), ConfigFileFormat::Yaml);
     assert!(!config.web().enabled());
+    assert!(!config.web().output_image());
     assert_eq!(config.web().host(), "0.0.0.0");
     assert_eq!(config.web().port(), 18080);
     assert!(config.log().enabled());
