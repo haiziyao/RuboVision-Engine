@@ -111,8 +111,8 @@ fn insert_sources(config: &mut RuboConfig, serial: &str) {
             .set("data_bit", 8_u8)
             .set("stop_bit", 1_u8)
             .set("parity_bit", false)
-            .set("prefix", Vec::<u8>::new())
-            .set("suffix", Vec::<u8>::new())
+            .set("prefix", vec![b'a'])
+            .set("suffix", vec![b'\r', b'\n'])
             .set("content_bytes", 1_usize),
     );
 }
@@ -129,25 +129,32 @@ fn insert_functions(config: &mut RuboConfig) {
         "color_detect".to_string(),
         FuncConfig::new("color_detect")
             .set("device_id", CAMERA_ID)
-            .set("debug_model", false)
-            .set("loop_count", 5_i32)
+            .set("max_frames", 30_usize)
+            .set("confirm_frames", 5_usize)
             .set("radius_ratio", 0.4_f64)
-            .set("detect_area_access_rate", 0.8_f64)
-            .set("color_ranges", default_color_ranges()),
+            .set("min_area_ratio", 0.8_f64)
+            .set("colors", default_colors()),
     );
     config.funcs_mut().insert(
         "qr_detect".to_string(),
         FuncConfig::new("qr_detect")
             .set("device_id", CAMERA_ID)
-            .set("debug_model", false)
-            .set("loop_count", 30_i32),
+            .set("max_frames", 30_usize),
+    );
+    config.funcs_mut().insert(
+        "letter_detect".to_string(),
+        FuncConfig::new("letter_detect")
+            .set("device_id", CAMERA_ID)
+            .set("max_frames", 30_usize)
+            .set("confirm_frames", 3_usize)
+            .set("black_threshold", 90_i32)
+            .set("min_letter_area_ratio", 0.05_f64),
     );
     config.funcs_mut().insert(
         "black_ring_detect".to_string(),
         FuncConfig::new("black_ring_detect")
             .set("device_id", CAMERA_ID)
-            .set("debug_model", false)
-            .set("loop_count", 3_i32)
+            .set("max_frames", 3_usize)
             .set("target_correction", default_target_correction())
             .set("black_threshold", 90_i32)
             .set("min_radius", 20.0_f64)
@@ -159,8 +166,7 @@ fn insert_functions(config: &mut RuboConfig) {
         "cross".to_string(),
         FuncConfig::new("cross")
             .set("device_id", CAMERA_ID)
-            .set("debug_model", false)
-            .set("loop_count", 3_i32)
+            .set("max_frames", 3_usize)
             .set("target_correction", default_target_correction())
             .set("black_threshold", 90_i32)
             .set("close_kernel_size", 5_i32)
@@ -170,8 +176,7 @@ fn insert_functions(config: &mut RuboConfig) {
             .set("max_radius", 600.0_f64)
             .set("center_tolerance", 14.0_f64)
             .set("min_arc_points", 24_usize)
-            .set("min_ring_score", 50_u8)
-            .set("colors", default_cross_colors()),
+            .set("min_ring_score", 50_u8),
     );
     config.funcs_mut().insert(
         "debug_fun".to_string(),
@@ -221,12 +226,28 @@ fn insert_bindings(config: &mut RuboConfig) {
         CAMERA_ID,
         "black_ring_detect",
     );
+    insert_uart_binding(
+        config,
+        "uart_letter_detect",
+        "5",
+        CAMERA_ID,
+        "letter_detect",
+    );
     config.bindings_mut().insert(
         "debug".to_string(),
         BindingConfig::new("debug")
             .source("web", "debug")
             .func("debug_fun")
             .sink(WEB_SINK_ID)
+            .debug(true),
+    );
+    config.bindings_mut().insert(
+        "uart_debug".to_string(),
+        BindingConfig::new("uart_debug")
+            .source(UART_SOURCE_ID, "49")
+            .func("debug_fun")
+            .sink(WEB_SINK_ID)
+            .sink(UART_SINK_ID)
             .debug(true),
     );
 }
@@ -250,23 +271,16 @@ fn insert_uart_binding(
     );
 }
 
-fn default_color_ranges() -> Vec<serde_json::Value> {
+fn default_colors() -> Vec<serde_json::Value> {
     vec![
-        color_range("red", [0, 50, 160, 255, 110, 255]),
-        color_range("blue", [100, 137, 124, 255, 56, 255]),
-        color_range("green", [50, 100, 91, 255, 85, 255]),
-        color_range("black", [0, 179, 0, 255, 0, 76]),
-        color_range("white", [0, 170, 0, 55, 120, 255]),
-    ]
-}
-
-fn default_cross_colors() -> Vec<serde_json::Value> {
-    vec![
-        cross_color(1, "red", [0, 20, 100, 255, 80, 255]),
-        cross_color(2, "blue", [90, 140, 80, 255, 50, 255]),
-        cross_color(3, "green", [35, 90, 70, 255, 50, 255]),
-        cross_color(4, "black", [0, 179, 0, 255, 0, 70]),
-        cross_color(5, "white", [0, 179, 0, 60, 230, 255]),
+        color_definition(
+            "red",
+            vec![[0, 10, 160, 255, 110, 255], [170, 179, 160, 255, 110, 255]],
+        ),
+        color_definition("blue", vec![[100, 137, 124, 255, 56, 255]]),
+        color_definition("green", vec![[50, 100, 91, 255, 85, 255]]),
+        color_definition("black", vec![[0, 179, 0, 255, 0, 76]]),
+        color_definition("white", vec![[0, 170, 0, 55, 120, 255]]),
     ]
 }
 
@@ -274,18 +288,8 @@ fn default_target_correction() -> serde_json::Value {
     serde_json::json!({ "x": 0, "y": 0 })
 }
 
-fn color_range(name: &str, hsv: [i32; 6]) -> serde_json::Value {
-    serde_json::json!({ "name": name, "hsv": hsv })
-}
-
-fn cross_color(id: u8, name: &str, hsv: [i32; 6]) -> serde_json::Value {
-    serde_json::json!({
-        "id": id,
-        "name": name,
-        "hsv": hsv,
-        "min_area": 500.0,
-        "min_circularity": 0.60
-    })
+fn color_definition(name: &str, hsv_ranges: Vec<[i32; 6]>) -> serde_json::Value {
+    serde_json::json!({ "name": name, "hsv_ranges": hsv_ranges })
 }
 
 fn default_gpio_signals(orangepi: bool) -> serde_json::Value {
@@ -344,31 +348,48 @@ mod tests {
                 .unwrap(),
             1
         );
-        assert_eq!(config.bindings().len(), 5);
+        assert_eq!(config.bindings().len(), 7);
         for id in [
             "uart_color_detect",
             "uart_qr_detect",
             "uart_cross_detect",
             "uart_black_ring_detect",
+            "uart_letter_detect",
         ] {
             assert!(config.bindings()[id].debug_enabled());
             assert_eq!(config.bindings()[id].devices(), &[CAMERA_ID.to_string()]);
         }
+        let uart_letter = &config.bindings()["uart_letter_detect"];
+        assert_eq!(uart_letter.source_ref().id(), UART_SOURCE_ID);
+        assert_eq!(uart_letter.source_ref().event(), "5");
+        assert_eq!(uart_letter.func_ref(), "letter_detect");
+        assert_eq!(
+            uart_letter.sinks(),
+            &[WEB_SINK_ID.to_string(), UART_SINK_ID.to_string()]
+        );
         let debug = &config.bindings()["debug"];
         assert_eq!(debug.source_ref().id(), "web");
         assert_eq!(debug.source_ref().event(), "debug");
         assert_eq!(debug.func_ref(), "debug_fun");
         assert_eq!(debug.sinks(), &["web".to_string()]);
+        let uart_debug = &config.bindings()["uart_debug"];
+        assert_eq!(uart_debug.source_ref().id(), UART_SOURCE_ID);
+        assert_eq!(uart_debug.source_ref().event(), "49");
+        assert_eq!(uart_debug.func_ref(), "debug_fun");
+        assert_eq!(
+            uart_debug.sinks(),
+            &[WEB_SINK_ID.to_string(), UART_SINK_ID.to_string()]
+        );
 
         let mut engine = build_engine(".", raspberrypi_app, config);
         engine.prepare_web();
-        assert_eq!(engine.config().bindings().len(), 5);
+        assert_eq!(engine.config().bindings().len(), 7);
         let runtime_config = engine.web_state().unwrap().runtime_config();
         let runtime_config = runtime_config
             .read()
             .expect("test runtime config lock poisoned");
         assert!(runtime_config.validate());
-        assert_eq!(runtime_config.bindings().len(), 9);
+        assert_eq!(runtime_config.bindings().len(), 13);
 
         let orangepi_app: AppConfig = serde_json::from_value(serde_json::json!({
             "config_path": "config",

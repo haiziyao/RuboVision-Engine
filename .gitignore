@@ -2,4 +2,5 @@
 .superpowers/brainstorm
 doc/*
 !doc/kunpeng_pro_migration.md
+!doc/uart_control_protocol.md
 logs/

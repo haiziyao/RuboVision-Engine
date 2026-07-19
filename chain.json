@@ -34,10 +34,15 @@
         "content_bytes": 1,
         "data_bit": 8,
         "parity_bit": false,
-        "prefix": [],
+        "prefix": [
+          97
+        ],
         "serial": "/dev/ttyAMA1",
         "stop_bit": 1,
-        "suffix": []
+        "suffix": [
+          13,
+          10
+        ]
       }
     },
     "function": {
@@ -97,10 +102,15 @@
         "content_bytes": 1,
         "data_bit": 8,
         "parity_bit": false,
-        "prefix": [],
+        "prefix": [
+          97
+        ],
         "serial": "/dev/ttyAMA1",
         "stop_bit": 1,
-        "suffix": []
+        "suffix": [
+          13,
+          10
+        ]
       }
     },
     "function": {
@@ -210,10 +220,15 @@
         "content_bytes": 1,
         "data_bit": 8,
         "parity_bit": false,
-        "prefix": [],
+        "prefix": [
+          97
+        ],
         "serial": "/dev/ttyAMA1",
         "stop_bit": 1,
-        "suffix": []
+        "suffix": [
+          13,
+          10
+        ]
       }
     },
     "function": {
@@ -339,6 +354,55 @@
     "debug": true
   },
   {
+    "binding": "uart_debug",
+    "source": {
+      "id": "uart",
+      "event": "49",
+      "kind": "uart",
+      "config": {
+        "baud": 9600,
+        "content_bytes": 1,
+        "data_bit": 8,
+        "parity_bit": false,
+        "prefix": [
+          97
+        ],
+        "serial": "/dev/ttyAMA1",
+        "stop_bit": 1,
+        "suffix": [
+          13,
+          10
+        ]
+      }
+    },
+    "function": {
+      "id": "debug_fun",
+      "config": {
+        "message": "debug"
+      }
+    },
+    "devices": [],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 9600,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/dev/ttyAMA1",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  },
+  {
     "binding": "uart_qr_detect",
     "source": {
       "id": "uart",
@@ -349,10 +413,15 @@
         "content_bytes": 1,
         "data_bit": 8,
         "parity_bit": false,
-        "prefix": [],
+        "prefix": [
+          97
+        ],
         "serial": "/dev/ttyAMA1",
         "stop_bit": 1,
-        "suffix": []
+        "suffix": [
+          13,
+          10
+        ]
       }
     },
     "function": {

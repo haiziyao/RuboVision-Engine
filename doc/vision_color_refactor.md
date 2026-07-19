@@ -610,3 +610,15 @@ src/func/
 `src/vision/detect.rs` is deleted because its QR, BlackRing, and Cross responsibilities move into
 their respective Function files. Reusable OpenCV operations move to `src/vision/util.rs`; business
 algorithms do not move there.
+
+## 18. Remaining-function implementation status
+
+The QR, BlackRing, and Cross refactors described above are implemented in the Example worktree.
+Both platform profiles and the code-declared configuration use the new strict fields. Cross no
+longer contains colored-cylinder configuration or Message payload fallback behavior, and
+`src/vision/detect.rs` has been removed.
+
+Default `cargo test` and `cargo clippy --all-targets` pass without OpenCV enabled. Final acceptance
+still requires compiling the `opencv` feature and manually running the six approved QR, BlackRing,
+and Cross test/display entries on the Ubuntu/OpenCV target. No OpenCV environment was installed or
+downloaded on Windows.

@@ -8,6 +8,19 @@ sinks = ["web"]
 event = "debug"
 id = "web"
 
+[uart_debug]
+debug = true
+devices = []
+function = "debug_fun"
+sinks = [
+    "web",
+    "uart",
+]
+
+[uart_debug.source]
+event = "49"
+id = "uart"
+
 [uart_black_ring_detect]
 debug = true
 devices = ["camera"]
@@ -45,6 +58,19 @@ sinks = [
 
 [uart_cross_detect.source]
 event = "3"
+id = "uart"
+
+[uart_letter_detect]
+debug = true
+devices = ["camera"]
+function = "letter_detect"
+sinks = [
+    "web",
+    "uart",
+]
+
+[uart_letter_detect.source]
+event = "5"
 id = "uart"
 
 [uart_qr_detect]
