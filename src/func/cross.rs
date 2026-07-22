@@ -648,10 +648,13 @@ mod tests {
             .await
             .expect("join cross analysis")
             .expect("analyze cross frame");
+            let value = format_cross_value(result.found, result.dx, result.dy, result.score);
+            let display = crate::vision::test::annotate_result(&result.frame, "CROSS", &value)
+                .expect("annotate cross result");
             highgui::imshow("cross.original", &frame).expect("show cross original");
             highgui::imshow("cross.gray", &result.gray).expect("show cross gray");
             highgui::imshow("cross.mask", &result.black_mask).expect("show cross mask");
-            highgui::imshow("cross.result", &result.frame).expect("show cross result");
+            highgui::imshow("cross.result", &display).expect("show cross result");
             let key = highgui::wait_key(1).expect("wait for cross key") & 0xff;
             if key == 113 || key == 27 {
                 break;

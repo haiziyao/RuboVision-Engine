@@ -15,11 +15,55 @@ pub const WEB_SINK_ID: &str = "web";
 pub const UART_SINK_ID: &str = "uart";
 pub const GPIO_SINK_ID: &str = "gpio";
 
+#[derive(Clone, Copy)]
+enum Platform {
+    Ubuntu,
+    OrangePi,
+    RaspberryPi,
+}
+
+impl Platform {
+    fn from_profile(profile: &str) -> Result<Self, ConfigError> {
+        match profile {
+            "ubuntu" => Ok(Self::Ubuntu),
+            "orangepi" => Ok(Self::OrangePi),
+            "raspberrypi" => Ok(Self::RaspberryPi),
+            _ => Err(ConfigError::ConfigLoad {
+                message: format!(
+                    "unsupported config profile {profile}; expected ubuntu, orangepi or raspberrypi"
+                ),
+            }),
+        }
+    }
+
+    fn uart(self) -> (&'static str, u32) {
+        match self {
+            Self::Ubuntu => ("/tmp/rubo-uart", 115_200),
+            Self::OrangePi => ("/dev/ttyAMA1", 9_600),
+            Self::RaspberryPi => ("/dev/serial0", 9_600),
+        }
+    }
+
+    fn camera_paths(self) -> (&'static str, &'static str) {
+        match self {
+            Self::Ubuntu => (
+                "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:9:1.0-video-index0",
+                "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:4:1.0-video-index0",
+            ),
+            Self::OrangePi => ("/dev/video0", "/dev/video0"),
+            Self::RaspberryPi => (
+                "/dev/v4l/by-path/platform-xhci-hcd.1-usb-0:2:1.0-video-index0",
+                "/dev/v4l/by-path/platform-xhci-hcd.0-usb-0:2:1.0-video-index0",
+            ),
+        }
+    }
+}
+
 pub fn default_app_config() -> AppConfig {
     serde_json::from_value(serde_json::json!({
         "name": "rubo_vision",
         "config_path": "config",
-        "profile": "orangepi",
+        "profile": "ubuntu",
         "config_format": "toml",
         "web": {
             "enabled": true,
@@ -35,30 +79,13 @@ pub fn default_app_config() -> AppConfig {
 }
 
 pub fn default_rubo_config(app_config: &AppConfig) -> Result<RuboConfig, ConfigError> {
-    let orangepi = match app_config.profile() {
-        "orangepi" => true,
-        "raspberrypi" => false,
-        _ => {
-            return Err(ConfigError::ConfigLoad {
-                message: format!(
-                    "unsupported config profile {}; expected orangepi or raspberrypi",
-                    app_config.profile()
-                ),
-            });
-        }
-    };
+    let platform = Platform::from_profile(app_config.profile())?;
+    let (serial, baud) = platform.uart();
     let mut config = RuboConfig::default();
-    insert_sources(
-        &mut config,
-        if orangepi {
-            "/dev/ttyAMA1"
-        } else {
-            "/dev/serial0"
-        },
-    );
-    insert_devices(&mut config, orangepi);
+    insert_sources(&mut config, serial, baud);
+    insert_devices(&mut config, platform);
     insert_functions(&mut config);
-    insert_sinks(&mut config, orangepi);
+    insert_sinks(&mut config, platform);
     insert_bindings(&mut config);
     Ok(config)
 }
@@ -95,13 +122,13 @@ pub fn build_engine(
     engine
 }
 
-fn insert_sources(config: &mut RuboConfig, serial: &str) {
+fn insert_sources(config: &mut RuboConfig, serial: &str, baud: u32) {
     config.sources_mut().insert(
         UART_SOURCE_ID.to_string(),
         SourceConfig::new(UART_SOURCE_ID)
             .kind("uart")
             .set("serial", serial)
-            .set("baud", 9600_u32)
+            .set("baud", baud)
             .set("data_bit", 8_u8)
             .set("stop_bit", 1_u8)
             .set("parity_bit", false)
@@ -111,28 +138,15 @@ fn insert_sources(config: &mut RuboConfig, serial: &str) {
     );
 }
 
-fn insert_devices(config: &mut RuboConfig, orangepi: bool) {
+fn insert_devices(config: &mut RuboConfig, platform: Platform) {
+    let (task_camera, road_camera) = platform.camera_paths();
     config.devices_mut().insert(
         TASK_CAMERA_ID.to_string(),
-        DeviceConfig::new(TASK_CAMERA_ID, "camera").set(
-            "path",
-            if orangepi {
-                "/dev/video0"
-            } else {
-                "/dev/v4l/by-path/platform-xhci-hcd.1-usb-0:2:1.0-video-index0"
-            },
-        ),
+        DeviceConfig::new(TASK_CAMERA_ID, "camera").set("path", task_camera),
     );
     config.devices_mut().insert(
         ROAD_CAMERA_ID.to_string(),
-        DeviceConfig::new(ROAD_CAMERA_ID, "camera").set(
-            "path",
-            if orangepi {
-                "/dev/video0"
-            } else {
-                "/dev/v4l/by-path/platform-xhci-hcd.0-usb-0:2:1.0-video-index0"
-            },
-        ),
+        DeviceConfig::new(ROAD_CAMERA_ID, "camera").set("path", road_camera),
     );
 }
 
@@ -196,12 +210,8 @@ fn insert_functions(config: &mut RuboConfig) {
     );
 }
 
-fn insert_sinks(config: &mut RuboConfig, orangepi: bool) {
-    let serial = if orangepi {
-        "/dev/ttyAMA1"
-    } else {
-        "/dev/serial0"
-    };
+fn insert_sinks(config: &mut RuboConfig, platform: Platform) {
+    let (serial, baud) = platform.uart();
     config.sinks_mut().insert(
         WEB_SINK_ID.to_string(),
         SinkConfig::new(WEB_SINK_ID).kind("web"),
@@ -211,20 +221,27 @@ fn insert_sinks(config: &mut RuboConfig, orangepi: bool) {
         SinkConfig::new(UART_SINK_ID)
             .kind("uart")
             .set("serial", serial)
-            .set("baud", 9600_u32)
+            .set("baud", baud)
             .set("data_bit", 8_u8)
             .set("stop_bit", 1_u8)
             .set("parity_bit", false),
     );
-    config.sinks_mut().insert(
-        GPIO_SINK_ID.to_string(),
-        SinkConfig::new(GPIO_SINK_ID)
-            .kind("gpio")
-            .set("active_low", true)
-            .set("chip", if orangepi { 7_u8 } else { 0_u8 })
-            .set("run_pin", if orangepi { 3_u32 } else { 27_u32 })
-            .set("signals", default_gpio_signals(orangepi)),
-    );
+    let gpio = match platform {
+        Platform::Ubuntu => None,
+        Platform::OrangePi => Some((7_u8, 3_u32, serde_json::json!({ "color": 4, "qr": 5 }))),
+        Platform::RaspberryPi => Some((0_u8, 27_u32, serde_json::json!({ "color": 17, "qr": 22 }))),
+    };
+    if let Some((chip, run_pin, signals)) = gpio {
+        config.sinks_mut().insert(
+            GPIO_SINK_ID.to_string(),
+            SinkConfig::new(GPIO_SINK_ID)
+                .kind("gpio")
+                .set("active_low", true)
+                .set("chip", chip)
+                .set("run_pin", run_pin)
+                .set("signals", signals),
+        );
+    }
 }
 
 fn insert_bindings(config: &mut RuboConfig) {
@@ -310,14 +327,6 @@ fn color_definition(name: &str, hsv_ranges: Vec<[i32; 6]>) -> serde_json::Value 
     serde_json::json!({ "name": name, "hsv_ranges": hsv_ranges })
 }
 
-fn default_gpio_signals(orangepi: bool) -> serde_json::Value {
-    if orangepi {
-        serde_json::json!({ "color": 4, "qr": 5 })
-    } else {
-        serde_json::json!({ "color": 17, "qr": 22 })
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -327,14 +336,45 @@ mod tests {
         let deployed_app = rubo_engine::config::ConfigStore::load_app_config("config").unwrap();
         assert_eq!(default_app_config(), deployed_app);
         assert_eq!(deployed_app.config_path(), std::path::Path::new("config"));
-        assert_eq!(deployed_app.profile(), "orangepi");
+        assert_eq!(deployed_app.profile(), "ubuntu");
         assert_eq!(
             deployed_app.config_dir(),
-            std::path::Path::new("config/orangepi")
+            std::path::Path::new("config/ubuntu")
         );
         assert_eq!(deployed_app.web().host(), "0.0.0.0");
         assert_eq!(deployed_app.web().port(), 3888);
         assert!(!std::path::Path::new("config/source.toml").exists());
+
+        let ubuntu = default_rubo_config(&deployed_app).unwrap();
+        assert_eq!(
+            rubo_engine::config::ConfigStore::load_active_config("config/ubuntu").unwrap(),
+            ubuntu
+        );
+        assert_eq!(
+            ubuntu.sources()[UART_SOURCE_ID]
+                .get_or("serial", String::new())
+                .unwrap(),
+            "/tmp/rubo-uart"
+        );
+        assert_eq!(
+            ubuntu.sources()[UART_SOURCE_ID]
+                .get_or("baud", 0_u32)
+                .unwrap(),
+            115_200
+        );
+        assert!(!ubuntu.sinks().contains_key(GPIO_SINK_ID));
+        assert_eq!(
+            ubuntu.devices()[TASK_CAMERA_ID]
+                .get_or("path", String::new())
+                .unwrap(),
+            "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:9:1.0-video-index0"
+        );
+        assert_eq!(
+            ubuntu.devices()[ROAD_CAMERA_ID]
+                .get_or("path", String::new())
+                .unwrap(),
+            "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:4:1.0-video-index0"
+        );
 
         let raspberrypi_app: AppConfig = serde_json::from_value(serde_json::json!({
             "config_path": "config",

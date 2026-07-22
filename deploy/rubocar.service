@@ -1,0 +1,16 @@
+[Unit]
+Description=RuboVision Engine
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hzy
+Group=hzy
+WorkingDirectory=/opt/rust-more/RuboVision-Engine
+ExecStart=/opt/rust-more/RuboVision-Engine/target/release/rubo_vision
+Restart=always
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

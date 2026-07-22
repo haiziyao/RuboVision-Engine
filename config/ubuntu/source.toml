@@ -1,0 +1,10 @@
+[uart]
+baud = 115200
+data_bit = 8
+kind = "uart"
+parity_bit = false
+serial = "/tmp/rubo-uart"
+stop_bit = 1
+prefix = [97]
+suffix = [13, 10]
+content_bytes = 1

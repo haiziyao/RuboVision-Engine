@@ -192,7 +192,13 @@ mod tests {
             if let Some(value) = result.value.as_deref() {
                 println!("qr={value}");
             }
-            highgui::imshow("qr.original", &frame).expect("show qr original");
+            let display = crate::vision::test::annotate_result(
+                &result.frame,
+                "QR",
+                result.value.as_deref().unwrap_or(""),
+            )
+            .expect("annotate qr result");
+            highgui::imshow("qr.original", &display).expect("show qr original");
             highgui::imshow("qr.gray", &result.gray).expect("show qr gray");
             let key = highgui::wait_key(1).expect("wait for qr key") & 0xff;
             if key == 113 || key == 27 {

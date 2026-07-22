@@ -10,7 +10,23 @@ use crate::device::CameraDevice;
 #[derive(Debug, Clone, Deserialize)]
 struct ColorDefinition {
     name: String,
+    #[serde(default)]
+    output: Option<String>,
     hsv_ranges: Vec<[i32; 6]>,
+}
+
+impl ColorDefinition {
+    #[cfg(feature = "opencv")]
+    fn output(&self) -> &str {
+        self.output.as_deref().unwrap_or(&self.name)
+    }
+}
+
+#[cfg(feature = "opencv")]
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ColorDetection {
+    name: String,
+    output: String,
 }
 
 #[derive(Debug, Clone)]
@@ -79,6 +95,15 @@ impl ColorParameters {
                     message: "color_detect color name cannot be empty".to_string(),
                 });
             }
+            if color
+                .output
+                .as_ref()
+                .is_some_and(|output| output.trim().is_empty())
+            {
+                return Err(FunctionError::Config {
+                    message: format!("color_detect color `{}` output cannot be empty", color.name),
+                });
+            }
             if color.hsv_ranges.is_empty() {
                 return Err(FunctionError::Config {
                     message: format!(
@@ -113,7 +138,7 @@ impl ColorParameters {
 
 #[cfg(feature = "opencv")]
 struct ColorFrameResult {
-    color: Option<String>,
+    color: Option<ColorDetection>,
     ratio: f64,
     roi: opencv::core::Mat,
     masks: Vec<(String, opencv::core::Mat)>,
@@ -123,6 +148,7 @@ struct ColorFrameResult {
 
 #[cfg(feature = "opencv")]
 struct ColorResult {
+    name: String,
     value: String,
     ratio: f64,
     frame: opencv::core::Mat,
@@ -158,14 +184,19 @@ fn analyze_color_frame(
         masks.push((color.name.clone(), mask));
     }
 
-    let color = (best_ratio >= parameters.min_area_ratio)
-        .then(|| parameters.colors[best_index].name.clone());
+    let color = (best_ratio >= parameters.min_area_ratio).then(|| ColorDetection {
+        name: parameters.colors[best_index].name.clone(),
+        output: parameters.colors[best_index].output().to_string(),
+    });
     let selected_mask = masks[best_index].1.try_clone()?;
     let mut annotated = frame.try_clone()?;
     let size = annotated.size()?;
     let center = core::Point::new(size.width / 2, size.height / 2);
     let radius = (size.width.min(size.height) as f64 * parameters.radius_ratio) as i32;
-    let label = color.as_deref().unwrap_or("unknown");
+    let label = color
+        .as_ref()
+        .map(|detection| detection.name.as_str())
+        .unwrap_or("unknown");
     imgproc::circle(
         &mut annotated,
         center,
@@ -218,20 +249,21 @@ async fn detect_color(
                     message: error.to_string(),
                 })?;
 
-        let Some(color) = frame_result.color.as_deref() else {
+        let Some(color) = frame_result.color.as_ref() else {
             candidate = None;
             consecutive_frames = 0;
             continue;
         };
-        if candidate.as_deref() == Some(color) {
+        if candidate.as_deref() == Some(color.name.as_str()) {
             consecutive_frames += 1;
         } else {
-            candidate = Some(color.to_string());
+            candidate = Some(color.name.clone());
             consecutive_frames = 1;
         }
         if consecutive_frames >= parameters.confirm_frames {
             return Ok(ColorResult {
-                value: color.to_string(),
+                name: color.name.clone(),
+                value: color.output.clone(),
                 ratio: frame_result.ratio,
                 frame: frame_result.frame,
             });
@@ -278,7 +310,8 @@ async fn run_color_detect(
 ) -> Result<FuncResult, FunctionError> {
     let result = detect_color(camera, parameters).await?;
     let mut output = serde_json::json!({
-        "text": format!("color_detect finished: {}", result.value),
+        "text": format!("color_detect finished: {}", result.name),
+        "name": result.name,
         "value": result.value,
         "ratio": result.ratio
     });
@@ -309,7 +342,10 @@ mod tests {
         let result = detect_color(camera, &parameters)
             .await
             .expect("detect color");
-        println!("color={} ratio={:.4}", result.value, result.ratio);
+        println!(
+            "color={} output={} ratio={:.4}",
+            result.name, result.value, result.ratio
+        );
     }
 
     #[tokio::test]
@@ -331,6 +367,19 @@ mod tests {
             .expect("join color analysis")
             .expect("analyze color frame");
 
+            let value = result
+                .color
+                .as_ref()
+                .map(|color| {
+                    format!(
+                        "{} -> {} ratio={:.2}",
+                        color.name, color.output, result.ratio
+                    )
+                })
+                .unwrap_or_else(|| format!("NOT FOUND ratio={:.2}", result.ratio));
+            let display = crate::vision::test::annotate_result(&result.frame, "COLOR", &value)
+                .expect("annotate color result");
+
             highgui::imshow("color.original", &frame).expect("show original frame");
             highgui::imshow("color.roi", &result.roi).expect("show color roi");
             for (name, mask) in &result.masks {
@@ -338,7 +387,7 @@ mod tests {
             }
             highgui::imshow("color.mask.selected", &result.selected_mask)
                 .expect("show selected color mask");
-            highgui::imshow("color.result", &result.frame).expect("show color result");
+            highgui::imshow("color.result", &display).expect("show color result");
             let key = highgui::wait_key(1).expect("wait for color key") & 0xff;
             if key == 113 || key == 27 {
                 break;

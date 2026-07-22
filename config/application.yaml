@@ -1,7 +1,7 @@
 name: rubo_vision
 config_path: config
-# 可选值：orangepi、raspberrypi
-profile: orangepi
+# 可选值：ubuntu、orangepi、raspberrypi
+profile: ubuntu
 config_format: toml
 web:
   enabled: true

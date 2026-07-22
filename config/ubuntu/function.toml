@@ -1,0 +1,81 @@
+[black_ring_detect]
+black_threshold = 90
+device_id = "road"
+max_frames = 3
+max_radius = 180.0
+min_circularity = 0.65
+min_radius = 20.0
+min_score = 50
+
+[black_ring_detect.target_correction]
+x = 0
+y = 0
+
+[color_detect]
+device_id = "road"
+max_frames = 30
+confirm_frames = 5
+radius_ratio = 0.4
+min_area_ratio = 0.8
+
+[[color_detect.colors]]
+name = "red"
+hsv_ranges = [
+    [0, 10, 160, 255, 110, 255],
+    [170, 179, 160, 255, 110, 255],
+]
+
+[[color_detect.colors]]
+name = "blue"
+hsv_ranges = [
+    [100, 137, 124, 255, 56, 255],
+]
+
+[[color_detect.colors]]
+name = "green"
+hsv_ranges = [
+    [50, 100, 91, 255, 85, 255],
+]
+
+[[color_detect.colors]]
+name = "black"
+hsv_ranges = [
+    [0, 179, 0, 255, 0, 76],
+]
+
+[[color_detect.colors]]
+name = "white"
+hsv_ranges = [
+    [0, 170, 0, 55, 120, 255],
+]
+
+[cross]
+black_threshold = 90
+center_tolerance = 14.0
+close_kernel_size = 5
+device_id = "road"
+dilate_iterations = 1
+dilate_kernel_size = 3
+max_frames = 3
+max_radius = 600.0
+min_arc_points = 24
+min_radius = 20.0
+min_ring_score = 50
+
+[cross.target_correction]
+x = 0
+y = 0
+
+[debug_fun]
+message = "debug"
+
+[letter_detect]
+black_threshold = 90
+confirm_frames = 3
+device_id = "road"
+max_frames = 30
+min_letter_area_ratio = 0.05
+
+[qr_detect]
+device_id = "task"
+max_frames = 30

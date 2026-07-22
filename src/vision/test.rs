@@ -14,6 +14,71 @@ pub fn show_frame(window: &str, frame: &opencv::core::Mat) -> opencv::Result<()>
     Ok(())
 }
 
+#[cfg(feature = "opencv")]
+pub fn annotate_result(
+    frame: &opencv::core::Mat,
+    label: &str,
+    value: &str,
+) -> opencv::Result<opencv::core::Mat> {
+    use opencv::{
+        core::{Point, Scalar},
+        imgproc,
+        prelude::MatTraitConst,
+    };
+
+    let value = value
+        .chars()
+        .map(|character| {
+            if character.is_control() {
+                ' '
+            } else {
+                character
+            }
+        })
+        .collect::<String>();
+    let value = value.trim();
+    let text = format!(
+        "{label}: {}",
+        if value.is_empty() { "NOT FOUND" } else { value }
+    );
+
+    let mut annotated = frame.try_clone()?;
+    let font = imgproc::FONT_HERSHEY_SIMPLEX;
+    let base_scale = 0.8;
+    let base_size = imgproc::get_text_size(&text, font, base_scale, 2, &mut 0)?;
+    let available_width = (annotated.cols() - 40).max(1);
+    let scale = if base_size.width > available_width {
+        (base_scale * f64::from(available_width) / f64::from(base_size.width)).max(0.35)
+    } else {
+        base_scale
+    };
+    let origin = Point::new(20, 40);
+
+    imgproc::put_text(
+        &mut annotated,
+        &text,
+        origin,
+        font,
+        scale,
+        Scalar::new(0.0, 0.0, 0.0, 0.0),
+        5,
+        imgproc::LINE_AA,
+        false,
+    )?;
+    imgproc::put_text(
+        &mut annotated,
+        &text,
+        origin,
+        font,
+        scale,
+        Scalar::new(0.0, 255.0, 0.0, 0.0),
+        2,
+        imgproc::LINE_AA,
+        false,
+    )?;
+    Ok(annotated)
+}
+
 pub fn load_config() -> Result<RuboConfig, String> {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let app_config =

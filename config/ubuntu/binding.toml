@@ -1,0 +1,87 @@
+[debug]
+debug = true
+devices = []
+function = "debug_fun"
+sinks = ["web"]
+
+[debug.source]
+event = "debug"
+id = "web"
+
+[uart_debug]
+debug = true
+devices = []
+function = "debug_fun"
+sinks = [
+    "web",
+    "uart",
+]
+
+[uart_debug.source]
+event = "49"
+id = "uart"
+
+[uart_black_ring_detect]
+debug = true
+devices = ["road"]
+function = "black_ring_detect"
+sinks = [
+    "web",
+    "uart",
+]
+
+[uart_black_ring_detect.source]
+event = "4"
+id = "uart"
+
+[uart_color_detect]
+debug = true
+devices = ["road"]
+function = "color_detect"
+sinks = [
+    "web",
+    "uart",
+]
+
+[uart_color_detect.source]
+event = "1"
+id = "uart"
+
+[uart_cross_detect]
+debug = true
+devices = ["road"]
+function = "cross"
+sinks = [
+    "web",
+    "uart",
+]
+
+[uart_cross_detect.source]
+event = "3"
+id = "uart"
+
+[uart_letter_detect]
+debug = true
+devices = ["road"]
+function = "letter_detect"
+sinks = [
+    "web",
+    "uart",
+]
+
+[uart_letter_detect.source]
+event = "5"
+id = "uart"
+
+[uart_qr_detect]
+debug = true
+devices = ["task"]
+function = "qr_detect"
+sinks = [
+    "web",
+    "uart",
+]
+
+[uart_qr_detect.source]
+event = "2"
+id = "uart"

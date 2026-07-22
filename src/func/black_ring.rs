@@ -402,10 +402,13 @@ mod tests {
             .await
             .expect("join black ring analysis")
             .expect("analyze black ring frame");
+            let value = format_black_ring_value(result.found, result.dx, result.dy, result.score);
+            let display = crate::vision::test::annotate_result(&result.frame, "BLACK RING", &value)
+                .expect("annotate black ring result");
             highgui::imshow("black_ring.original", &frame).expect("show black ring original");
             highgui::imshow("black_ring.gray", &result.gray).expect("show black ring gray");
             highgui::imshow("black_ring.mask", &result.black_mask).expect("show black ring mask");
-            highgui::imshow("black_ring.result", &result.frame).expect("show black ring result");
+            highgui::imshow("black_ring.result", &display).expect("show black ring result");
             let key = highgui::wait_key(1).expect("wait for black ring key") & 0xff;
             if key == 113 || key == 27 {
                 break;

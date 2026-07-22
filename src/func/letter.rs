@@ -382,11 +382,18 @@ mod tests {
             .await
             .expect("join letter analysis")
             .expect("analyze letter frame");
+            let value = format!(
+                "{} holes={}",
+                result.letter.as_deref().unwrap_or("NOT FOUND"),
+                result.holes
+            );
+            let display = crate::vision::test::annotate_result(&result.frame, "LETTER", &value)
+                .expect("annotate letter result");
             highgui::imshow("letter.original", &frame).expect("show letter original");
             highgui::imshow("letter.gray", &result.gray).expect("show letter gray");
             highgui::imshow("letter.mask", &result.black_mask).expect("show letter mask");
             highgui::imshow("letter.inner", &result.inner_mask).expect("show letter inner mask");
-            highgui::imshow("letter.result", &result.frame).expect("show letter result");
+            highgui::imshow("letter.result", &display).expect("show letter result");
             let key = highgui::wait_key(1).expect("wait for letter key") & 0xff;
             if key == 113 || key == 27 {
                 break;
