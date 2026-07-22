@@ -98,6 +98,12 @@ COMMAND 是一个原始二进制字节，不是十进制数字字符串。
 | 黑环识别 | `0x04` | `61 04 0D 0A` | `{0x61, 0x04, 0x0D, 0x0A}` |
 | A/B/C 字母识别 | `0x05` | `61 05 0D 0A` | `{0x61, 0x05, 0x0D, 0x0A}` |
 | 彩色柱定位 | `0x06` | `61 06 0D 0A` | `{0x61, 0x06, 0x0D, 0x0A}` |
+| 颜色结果样例 | `0x11` | `61 11 0D 0A` | `{0x61, 0x11, 0x0D, 0x0A}` |
+| 二维码结果样例 | `0x12` | `61 12 0D 0A` | `{0x61, 0x12, 0x0D, 0x0A}` |
+| 同心圆环结果样例 | `0x13` | `61 13 0D 0A` | `{0x61, 0x13, 0x0D, 0x0A}` |
+| 黑环结果样例 | `0x14` | `61 14 0D 0A` | `{0x61, 0x14, 0x0D, 0x0A}` |
+| 字母结果样例 | `0x15` | `61 15 0D 0A` | `{0x61, 0x15, 0x0D, 0x0A}` |
+| 彩色柱结果样例 | `0x16` | `61 16 0D 0A` | `{0x61, 0x16, 0x0D, 0x0A}` |
 | Debug 联调 | `0x31` | `61 31 0D 0A` | `{0x61, 0x31, 0x0D, 0x0A}` |
 
 ### 4.1 必须注意的不对称规则
@@ -156,6 +162,12 @@ Engine 从完整帧中只提取中间的 COMMAND 字节，并将其无符号十�
 0x04 -> key "4"
 0x05 -> key "5"
 0x06 -> key "6"
+0x11 -> key "17"
+0x12 -> key "18"
+0x13 -> key "19"
+0x14 -> key "20"
+0x15 -> key "21"
+0x16 -> key "22"
 0x31 -> key "49"
 ```
 
@@ -308,7 +320,30 @@ BLOCK,unknown,0,0,0\n
 
 电控 MUST 按逗号拆成5个字段，并检查第一个字段严格等于 `BLOCK`。未找到时 `color=unknown`、`found=0`，此时 `dx`、`dy` 固定为0。
 
-### 6.8 错误返回
+### 6.8 电控调试结果样例
+
+`0x11` 至 `0x16` 不访问摄像头，固定返回各识别函数的一组成功结果，用于单独验证 Web 和 UART 链路：
+
+| COMMAND | Web 调试 Binding | UART 返回（末尾均追加 `LF`） |
+|---:|---|---|
+| `0x11` | `uart_sample_color_result` | `blue` |
+| `0x12` | `uart_sample_qr_result` | `RUBO-QR-SAMPLE` |
+| `0x13` | `uart_sample_concentric_ring_result` | `CROSS,0,1,-12,8,92` |
+| `0x14` | `uart_sample_black_ring_result` | `RING,1,-5,11,88` |
+| `0x15` | `uart_sample_letter_result` | `A` |
+| `0x16` | `uart_sample_color_block_result` | `BLOCK,blue,1,-20,15` |
+
+这些 Binding 同时连接 Web Sink 和 UART Sink，并开启了 Web 调试触发入口。Web Sink 接收完整 JSON，其中包含 `sample: true`；UART Sink 只发送 `value`。
+
+也可直接调用 Web API，例如触发颜色样例：
+
+```bash
+curl -X POST http://127.0.0.1:3888/api/debug/trigger \
+  -H 'content-type: application/json' \
+  -d '{"binding_id":"uart_sample_color_result","description":"control test","payload":{}}'
+```
+
+### 6.9 错误返回
 
 Function 已经匹配但执行失败时，UART 可能收到以下形式的英文文本：
 
@@ -356,6 +391,7 @@ IDLE
 | 功能 | 建议超时 |
 |---|---:|
 | Debug | 2秒 |
+| 结果样例 `0x11` 至 `0x16` | 2秒 |
 | 颜色识别 | 15秒 |
 | 同心圆环/黑环识别 | 15秒 |
 | A/B/C 字母识别 | 15秒 |
@@ -377,6 +413,12 @@ typedef enum {
     RUBO_CMD_BLACK_RING = 0x04,
     RUBO_CMD_LETTER     = 0x05,
     RUBO_CMD_COLOR_BLOCK = 0x06,
+    RUBO_CMD_SAMPLE_COLOR = 0x11,
+    RUBO_CMD_SAMPLE_QR = 0x12,
+    RUBO_CMD_SAMPLE_CONCENTRIC_RING = 0x13,
+    RUBO_CMD_SAMPLE_BLACK_RING = 0x14,
+    RUBO_CMD_SAMPLE_LETTER = 0x15,
+    RUBO_CMD_SAMPLE_COLOR_BLOCK = 0x16,
     RUBO_CMD_DEBUG      = 0x31,
 } RuboCommand;
 
@@ -580,6 +622,12 @@ COMMANDS = {
     "black_ring": 0x04,
     "letter": 0x05,
     "color_block": 0x06,
+    "sample_color": 0x11,
+    "sample_qr": 0x12,
+    "sample_concentric_ring": 0x13,
+    "sample_black_ring": 0x14,
+    "sample_letter": 0x15,
+    "sample_color_block": 0x16,
     "debug": 0x31,
 }
 
@@ -617,6 +665,12 @@ debug success
 | `61 04 0D 0A` | 执行黑环识别 |
 | `61 05 0D 0A` | 执行 A/B/C 字母识别，成功时返回 `A\n`、`B\n` 或 `C\n` |
 | `61 06 0D 0A` | 执行彩色柱定位，返回 `BLOCK,<color>,<found>,<dx>,<dy>\n` |
+| `61 11 0D 0A` | 不访问摄像头，固定返回 `blue\n` |
+| `61 12 0D 0A` | 不访问摄像头，固定返回 `RUBO-QR-SAMPLE\n` |
+| `61 13 0D 0A` | 不访问摄像头，固定返回 `CROSS,0,1,-12,8,92\n` |
+| `61 14 0D 0A` | 不访问摄像头，固定返回 `RING,1,-5,11,88\n` |
+| `61 15 0D 0A` | 不访问摄像头，固定返回 `A\n` |
+| `61 16 0D 0A` | 不访问摄像头，固定返回 `BLOCK,blue,1,-20,15\n` |
 
 ### 12.2 必须拒绝或不触发目标 Function
 

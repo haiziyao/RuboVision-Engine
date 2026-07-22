@@ -123,3 +123,15 @@ min_letter_area_ratio = 0.05
 [qr_detect]
 device_id = "task"
 max_frames = 30
+
+[sample_black_ring_result]
+
+[sample_color_block_result]
+
+[sample_color_result]
+
+[sample_concentric_ring_result]
+
+[sample_letter_result]
+
+[sample_qr_result]

@@ -98,3 +98,63 @@ sinks = [
 [uart_qr_detect.source]
 event = "2"
 id = "uart"
+
+[uart_sample_black_ring_result]
+debug = true
+devices = []
+function = "sample_black_ring_result"
+sinks = ["web", "uart"]
+
+[uart_sample_black_ring_result.source]
+event = "20"
+id = "uart"
+
+[uart_sample_color_block_result]
+debug = true
+devices = []
+function = "sample_color_block_result"
+sinks = ["web", "uart"]
+
+[uart_sample_color_block_result.source]
+event = "22"
+id = "uart"
+
+[uart_sample_color_result]
+debug = true
+devices = []
+function = "sample_color_result"
+sinks = ["web", "uart"]
+
+[uart_sample_color_result.source]
+event = "17"
+id = "uart"
+
+[uart_sample_concentric_ring_result]
+debug = true
+devices = []
+function = "sample_concentric_ring_result"
+sinks = ["web", "uart"]
+
+[uart_sample_concentric_ring_result.source]
+event = "19"
+id = "uart"
+
+[uart_sample_letter_result]
+debug = true
+devices = []
+function = "sample_letter_result"
+sinks = ["web", "uart"]
+
+[uart_sample_letter_result.source]
+event = "21"
+id = "uart"
+
+[uart_sample_qr_result]
+debug = true
+devices = []
+function = "sample_qr_result"
+sinks = ["web", "uart"]
+
+[uart_sample_qr_result.source]
+event = "18"
+id = "uart"

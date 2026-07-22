@@ -606,5 +606,287 @@
       }
     ],
     "debug": true
+  },
+  {
+    "binding": "uart_sample_black_ring_result",
+    "source": {
+      "id": "uart",
+      "event": "20",
+      "kind": "uart",
+      "config": {
+        "baud": 115200,
+        "content_bytes": 1,
+        "data_bit": 8,
+        "parity_bit": false,
+        "prefix": [
+          97
+        ],
+        "serial": "/tmp/rubo-uart",
+        "stop_bit": 1,
+        "suffix": [
+          13,
+          10
+        ]
+      }
+    },
+    "function": {
+      "id": "sample_black_ring_result",
+      "config": {}
+    },
+    "devices": [],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 115200,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/tmp/rubo-uart",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  },
+  {
+    "binding": "uart_sample_color_block_result",
+    "source": {
+      "id": "uart",
+      "event": "22",
+      "kind": "uart",
+      "config": {
+        "baud": 115200,
+        "content_bytes": 1,
+        "data_bit": 8,
+        "parity_bit": false,
+        "prefix": [
+          97
+        ],
+        "serial": "/tmp/rubo-uart",
+        "stop_bit": 1,
+        "suffix": [
+          13,
+          10
+        ]
+      }
+    },
+    "function": {
+      "id": "sample_color_block_result",
+      "config": {}
+    },
+    "devices": [],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 115200,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/tmp/rubo-uart",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  },
+  {
+    "binding": "uart_sample_color_result",
+    "source": {
+      "id": "uart",
+      "event": "17",
+      "kind": "uart",
+      "config": {
+        "baud": 115200,
+        "content_bytes": 1,
+        "data_bit": 8,
+        "parity_bit": false,
+        "prefix": [
+          97
+        ],
+        "serial": "/tmp/rubo-uart",
+        "stop_bit": 1,
+        "suffix": [
+          13,
+          10
+        ]
+      }
+    },
+    "function": {
+      "id": "sample_color_result",
+      "config": {}
+    },
+    "devices": [],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 115200,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/tmp/rubo-uart",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  },
+  {
+    "binding": "uart_sample_concentric_ring_result",
+    "source": {
+      "id": "uart",
+      "event": "19",
+      "kind": "uart",
+      "config": {
+        "baud": 115200,
+        "content_bytes": 1,
+        "data_bit": 8,
+        "parity_bit": false,
+        "prefix": [
+          97
+        ],
+        "serial": "/tmp/rubo-uart",
+        "stop_bit": 1,
+        "suffix": [
+          13,
+          10
+        ]
+      }
+    },
+    "function": {
+      "id": "sample_concentric_ring_result",
+      "config": {}
+    },
+    "devices": [],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 115200,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/tmp/rubo-uart",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  },
+  {
+    "binding": "uart_sample_letter_result",
+    "source": {
+      "id": "uart",
+      "event": "21",
+      "kind": "uart",
+      "config": {
+        "baud": 115200,
+        "content_bytes": 1,
+        "data_bit": 8,
+        "parity_bit": false,
+        "prefix": [
+          97
+        ],
+        "serial": "/tmp/rubo-uart",
+        "stop_bit": 1,
+        "suffix": [
+          13,
+          10
+        ]
+      }
+    },
+    "function": {
+      "id": "sample_letter_result",
+      "config": {}
+    },
+    "devices": [],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 115200,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/tmp/rubo-uart",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  },
+  {
+    "binding": "uart_sample_qr_result",
+    "source": {
+      "id": "uart",
+      "event": "18",
+      "kind": "uart",
+      "config": {
+        "baud": 115200,
+        "content_bytes": 1,
+        "data_bit": 8,
+        "parity_bit": false,
+        "prefix": [
+          97
+        ],
+        "serial": "/tmp/rubo-uart",
+        "stop_bit": 1,
+        "suffix": [
+          13,
+          10
+        ]
+      }
+    },
+    "function": {
+      "id": "sample_qr_result",
+      "config": {}
+    },
+    "devices": [],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 115200,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/tmp/rubo-uart",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
   }
 ]

@@ -151,6 +151,18 @@ fn insert_devices(config: &mut RuboConfig, platform: Platform) {
 }
 
 fn insert_functions(config: &mut RuboConfig) {
+    for id in [
+        "sample_color_result",
+        "sample_qr_result",
+        "sample_concentric_ring_result",
+        "sample_black_ring_result",
+        "sample_letter_result",
+        "sample_color_block_result",
+    ] {
+        config
+            .funcs_mut()
+            .insert(id.to_string(), FuncConfig::new(id));
+    }
     config.funcs_mut().insert(
         "color_block_detect".to_string(),
         FuncConfig::new("color_block_detect")
@@ -311,6 +323,28 @@ fn insert_bindings(config: &mut RuboConfig) {
             .sink(UART_SINK_ID)
             .debug(true),
     );
+    for (id, key, function_id) in [
+        ("uart_sample_color_result", "17", "sample_color_result"),
+        ("uart_sample_qr_result", "18", "sample_qr_result"),
+        (
+            "uart_sample_concentric_ring_result",
+            "19",
+            "sample_concentric_ring_result",
+        ),
+        (
+            "uart_sample_black_ring_result",
+            "20",
+            "sample_black_ring_result",
+        ),
+        ("uart_sample_letter_result", "21", "sample_letter_result"),
+        (
+            "uart_sample_color_block_result",
+            "22",
+            "sample_color_block_result",
+        ),
+    ] {
+        insert_result_sample_binding(config, id, key, function_id);
+    }
 }
 
 fn insert_uart_binding(
@@ -326,6 +360,18 @@ fn insert_uart_binding(
             .source(UART_SOURCE_ID, key)
             .func(function_id)
             .device(device_id)
+            .sink(WEB_SINK_ID)
+            .sink(UART_SINK_ID)
+            .debug(true),
+    );
+}
+
+fn insert_result_sample_binding(config: &mut RuboConfig, id: &str, key: &str, function_id: &str) {
+    config.bindings_mut().insert(
+        id.to_string(),
+        BindingConfig::new(id)
+            .source(UART_SOURCE_ID, key)
+            .func(function_id)
             .sink(WEB_SINK_ID)
             .sink(UART_SINK_ID)
             .debug(true),
@@ -445,7 +491,7 @@ mod tests {
                 .unwrap(),
             1
         );
-        assert_eq!(config.bindings().len(), 8);
+        assert_eq!(config.bindings().len(), 14);
         for id in [
             "uart_color_detect",
             "uart_qr_detect",
@@ -486,16 +532,52 @@ mod tests {
             uart_debug.sinks(),
             &[WEB_SINK_ID.to_string(), UART_SINK_ID.to_string()]
         );
+        for (id, event, function_id) in [
+            ("uart_sample_color_result", "17", "sample_color_result"),
+            ("uart_sample_qr_result", "18", "sample_qr_result"),
+            (
+                "uart_sample_concentric_ring_result",
+                "19",
+                "sample_concentric_ring_result",
+            ),
+            (
+                "uart_sample_black_ring_result",
+                "20",
+                "sample_black_ring_result",
+            ),
+            ("uart_sample_letter_result", "21", "sample_letter_result"),
+            (
+                "uart_sample_color_block_result",
+                "22",
+                "sample_color_block_result",
+            ),
+        ] {
+            let binding = &config.bindings()[id];
+            assert!(binding.debug_enabled());
+            assert!(binding.devices().is_empty());
+            assert_eq!(binding.source_ref().id(), UART_SOURCE_ID);
+            assert_eq!(binding.source_ref().event(), event);
+            assert_eq!(binding.func_ref(), function_id);
+            assert_eq!(
+                binding.sinks(),
+                &[WEB_SINK_ID.to_string(), UART_SINK_ID.to_string()]
+            );
+        }
 
         let mut engine = build_engine(".", raspberrypi_app, config);
         engine.prepare_web();
-        assert_eq!(engine.config().bindings().len(), 8);
+        assert_eq!(engine.config().bindings().len(), 14);
         let runtime_config = engine.web_state().unwrap().runtime_config();
         let runtime_config = runtime_config
             .read()
             .expect("test runtime config lock poisoned");
         assert!(runtime_config.validate());
-        assert_eq!(runtime_config.bindings().len(), 15);
+        assert_eq!(runtime_config.bindings().len(), 27);
+        assert!(runtime_config.bindings().values().any(|binding| {
+            binding.source_ref().id() == "web"
+                && binding.func_ref() == "sample_color_result"
+                && binding.sinks() == &[WEB_SINK_ID.to_string(), UART_SINK_ID.to_string()]
+        }));
 
         let orangepi_app: AppConfig = serde_json::from_value(serde_json::json!({
             "config_path": "config",
