@@ -5,7 +5,7 @@ edition = "2024"
 license = "MIT OR Apache-2.0"
 
 [features]
-default = []
+default = ["opencv"]
 opencv = ["dep:opencv", "dep:quircs", "dep:base64"]
 hardware = ["rubo_engine/hardware", "dep:gpiod"]
 

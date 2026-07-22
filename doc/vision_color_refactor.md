@@ -10,7 +10,7 @@ It has three purposes:
 2. Define the required organization of a framework Function without mixing reusable OpenCV operations, business logic, framework adaptation, and interactive debugging.
 3. Prevent later implementation from silently inventing file names, type names, fields, default values, or behavior that has not been approved.
 
-Color was the first implementation target. QR, BlackRing, and Cross designs were subsequently
+Color was the first implementation target. QR, BlackRing, and ConcentricRing designs were subsequently
 reviewed and approved in Sections 14 through 16.
 
 ## 2. Scope
@@ -22,7 +22,7 @@ The complete Vision rebuild eventually covers:
 - Color detection.
 - QR detection.
 - Black-ring detection.
-- Cross and colored-object detection.
+- ConcentricRing and colored-object detection.
 - Framework Function adapters.
 - Runtime result construction.
 - Hardware tests and interactive OpenCV debugging tools.
@@ -44,11 +44,11 @@ The current `src/vision/detect.rs` contains approximately 640 lines and combines
 - Output types.
 - Color configuration types.
 - Ring configuration types.
-- Cross configuration types.
+- ConcentricRing configuration types.
 - Color detection.
 - QR decoding.
 - Black-ring detection.
-- Cross detection.
+- ConcentricRing detection.
 - Generic OpenCV transformations.
 - Drawing helpers.
 
@@ -69,7 +69,7 @@ Each current visual Function performs most of the following work:
 9. Build the JSON `FuncResult`.
 10. Convert several unrelated errors into `FunctionError`.
 
-This makes the Function adapter difficult to read and creates almost identical code in Color, QR, black-ring, and Cross.
+This makes the Function adapter difficult to read and creates almost identical code in Color, QR, black-ring, and ConcentricRing.
 
 ### 3.3 Tests do not follow one implementation path
 
@@ -124,7 +124,7 @@ It encapsulates small reusable OpenCV operations such as:
 
 The key principle is:
 
-> OpenCV operations that are independent of Color, QR, rings, Cross, Camera registration, and framework configuration belong in a reusable Vision utility layer.
+> OpenCV operations that are independent of Color, QR, rings, ConcentricRing, Camera registration, and framework configuration belong in a reusable Vision utility layer.
 
 The utility layer must not:
 
@@ -447,7 +447,7 @@ when Web is enabled, `output_image` is true, and the active Binding routes to th
 
 ## 12. Shared requirements for the remaining visual functions
 
-QR, BlackRing, and Cross follow the same high-level organization after separate approval:
+QR, BlackRing, and ConcentricRing follow the same high-level organization after separate approval:
 
 1. Reusable OpenCV operations in the Vision utility layer.
 2. A single-frame core independent of Camera and framework configuration.
@@ -540,16 +540,16 @@ The runtime JSON contains `value`, `found`, `dx`, `dy`, and `score`. `image` is 
 `debug_model` and `loop_count` are removed. Numeric configuration is validated for meaningful
 threshold, radius, circularity, score, and frame-count ranges.
 
-## 16. Approved Cross refactor
+## 16. Approved ConcentricRing refactor
 
-Cross remains in `src/func/cross.rs`. It only locates the center of a group of concentric circular
+ConcentricRing remains in `src/func/concentric_ring.rs`. It only locates the center of a group of concentric circular
 arcs. The unreachable colored-cylinder mode, `runtime_param` parsing, and `colors` configuration are
 removed.
 
 Required configuration:
 
 ```toml
-[cross]
+[concentric_ring]
 device_id = "camera"
 max_frames = 3
 black_threshold = 90
@@ -562,7 +562,7 @@ center_tolerance = 14.0
 min_arc_points = 24
 min_ring_score = 50
 
-[cross.target_correction]
+[concentric_ring.target_correction]
 x = 0
 y = 0
 ```
@@ -582,8 +582,8 @@ The fixed `0` is retained only as a protocol field; it is no longer read from Me
 used to select an algorithm. The runtime JSON contains `value`, `found`, `dx`, `dy`, and `score`.
 `image` is conditional on `FunctionCall::image_enabled()`.
 
-- `test_cross` loads configuration and Camera and calls the complete core.
-- `test_cross_show` displays original, grayscale, black mask, and annotated frames.
+- `test_concentric_ring` loads configuration and Camera and calls the complete core.
+- `test_concentric_ring_show` displays original, grayscale, black mask, and annotated frames.
 
 `debug_model`, `loop_count`, colors, and payload fallback behavior are removed. Kernel sizes must be
 positive odd numbers; frame counts, thresholds, radii, tolerances, arc counts, and scores receive
@@ -603,22 +603,22 @@ src/func/
   color.rs
   qr.rs
   black_ring.rs
-  cross.rs
+  concentric_ring.rs
   debug.rs
 ```
 
-`src/vision/detect.rs` is deleted because its QR, BlackRing, and Cross responsibilities move into
+`src/vision/detect.rs` is deleted because its QR, BlackRing, and ConcentricRing responsibilities move into
 their respective Function files. Reusable OpenCV operations move to `src/vision/util.rs`; business
 algorithms do not move there.
 
 ## 18. Remaining-function implementation status
 
-The QR, BlackRing, and Cross refactors described above are implemented in the Example worktree.
-Both platform profiles and the code-declared configuration use the new strict fields. Cross no
+The QR, BlackRing, and ConcentricRing refactors described above are implemented in the Example worktree.
+Both platform profiles and the code-declared configuration use the new strict fields. ConcentricRing no
 longer contains colored-cylinder configuration or Message payload fallback behavior, and
 `src/vision/detect.rs` has been removed.
 
 Default `cargo test` and `cargo clippy --all-targets` pass without OpenCV enabled. Final acceptance
 still requires compiling the `opencv` feature and manually running the six approved QR, BlackRing,
-and Cross test/display entries on the Ubuntu/OpenCV target. No OpenCV environment was installed or
+and ConcentricRing test/display entries on the Ubuntu/OpenCV target. No OpenCV environment was installed or
 downloaded on Windows.

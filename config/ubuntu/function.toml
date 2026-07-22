@@ -11,6 +11,50 @@ min_score = 50
 x = 0
 y = 0
 
+[color_block_detect]
+close_kernel_size = 5
+device_id = "road"
+edge_margin = 5
+max_area_ratio = 0.45
+max_frames = 3
+min_area = 1500.0
+open_kernel_size = 5
+
+[[color_block_detect.colors]]
+name = "red"
+hsv_ranges = [
+    [0, 10, 160, 255, 110, 255],
+    [170, 179, 160, 255, 110, 255],
+]
+
+[[color_block_detect.colors]]
+name = "blue"
+hsv_ranges = [
+    [100, 137, 124, 255, 56, 255],
+]
+
+[[color_block_detect.colors]]
+name = "green"
+hsv_ranges = [
+    [50, 100, 91, 255, 85, 255],
+]
+
+[[color_block_detect.colors]]
+name = "black"
+hsv_ranges = [
+    [0, 179, 0, 255, 0, 76],
+]
+
+[[color_block_detect.colors]]
+name = "white"
+hsv_ranges = [
+    [0, 84, 0, 43, 180, 225],
+]
+
+[color_block_detect.target_correction]
+x = 0
+y = 0
+
 [color_detect]
 device_id = "road"
 max_frames = 30
@@ -46,10 +90,10 @@ hsv_ranges = [
 [[color_detect.colors]]
 name = "white"
 hsv_ranges = [
-    [0, 170, 0, 55, 120, 255],
+    [0, 84, 0, 43, 180, 225],
 ]
 
-[cross]
+[concentric_ring]
 black_threshold = 90
 center_tolerance = 14.0
 close_kernel_size = 5
@@ -62,7 +106,7 @@ min_arc_points = 24
 min_radius = 20.0
 min_ring_score = 50
 
-[cross.target_correction]
+[concentric_ring.target_correction]
 x = 0
 y = 0
 

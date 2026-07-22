@@ -34,6 +34,19 @@ sinks = [
 event = "4"
 id = "uart"
 
+[uart_color_block_detect]
+debug = true
+devices = ["road"]
+function = "color_block_detect"
+sinks = [
+    "web",
+    "uart",
+]
+
+[uart_color_block_detect.source]
+event = "6"
+id = "uart"
+
 [uart_color_detect]
 debug = true
 devices = ["road"]
@@ -47,16 +60,16 @@ sinks = [
 event = "1"
 id = "uart"
 
-[uart_cross_detect]
+[uart_concentric_ring_detect]
 debug = true
 devices = ["road"]
-function = "cross"
+function = "concentric_ring"
 sinks = [
     "web",
     "uart",
 ]
 
-[uart_cross_detect.source]
+[uart_concentric_ring_detect.source]
 event = "3"
 id = "uart"
 

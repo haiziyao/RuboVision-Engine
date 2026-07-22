@@ -94,16 +94,17 @@ COMMAND 是一个原始二进制字节，不是十进制数字字符串。
 |---|---:|---|---|
 | 颜色识别 | `0x01` | `61 01 0D 0A` | `{0x61, 0x01, 0x0D, 0x0A}` |
 | 二维码识别 | `0x02` | `61 02 0D 0A` | `{0x61, 0x02, 0x0D, 0x0A}` |
-| 十字/圆环定位 | `0x03` | `61 03 0D 0A` | `{0x61, 0x03, 0x0D, 0x0A}` |
+| 同心圆环定位 | `0x03` | `61 03 0D 0A` | `{0x61, 0x03, 0x0D, 0x0A}` |
 | 黑环识别 | `0x04` | `61 04 0D 0A` | `{0x61, 0x04, 0x0D, 0x0A}` |
 | A/B/C 字母识别 | `0x05` | `61 05 0D 0A` | `{0x61, 0x05, 0x0D, 0x0A}` |
+| 彩色柱定位 | `0x06` | `61 06 0D 0A` | `{0x61, 0x06, 0x0D, 0x0A}` |
 | Debug 联调 | `0x31` | `61 31 0D 0A` | `{0x61, 0x31, 0x0D, 0x0A}` |
 
 ### 4.1 必须注意的不对称规则
 
 Debug 使用 ASCII 字符 `'1'`，其字节值是 `0x31`。
 
-视觉功能使用二进制字节 `0x01` 到 `0x05`，不是 ASCII 字符 `'1'` 到 `'5'`。
+视觉功能使用二进制字节 `0x01` 到 `0x06`，不是 ASCII 字符 `'1'` 到 `'6'`。
 
 因此：
 
@@ -154,6 +155,7 @@ Engine 从完整帧中只提取中间的 COMMAND 字节，并将其无符号十�
 0x03 -> key "3"
 0x04 -> key "4"
 0x05 -> key "5"
+0x06 -> key "6"
 0x31 -> key "49"
 ```
 
@@ -223,7 +225,7 @@ unknown\n
 
 当前协议没有长度字段，因此用于联调的二维码内容 SHOULD NOT 包含嵌入式换行符。电控接收缓冲区不得只按十几个字节设计，二维码结果可能比其他结果长。
 
-### 6.4 十字/圆环定位返回
+### 6.4 同心圆环定位返回
 
 格式：
 
@@ -279,7 +281,34 @@ C\n
 
 其他字符串不是有效的字母识别结果。识别失败会进入错误返回，不会返回默认字母。
 
-### 6.7 错误返回
+### 6.7 彩色柱定位返回
+
+格式：
+
+```text
+BLOCK,<color>,<found>,<dx>,<dy>\n
+```
+
+字段定义：
+
+| 字段 | 类型 | 含义 |
+|---|---|---|
+| `color` | 文本 | 当前配置为 `red`、`blue`、`green`、`black`、`white`；未找到时为 `unknown` |
+| `found` | `0` 或 `1` | 是否找到任一配置颜色的柱子 |
+| `dx` | 有符号十进制整数 | 彩色柱中心相对目标点的 X 偏差，向右为正 |
+| `dy` | 有符号十进制整数 | 彩色柱中心相对目标点的 Y 偏差，向下为正 |
+
+示例：
+
+```text
+BLOCK,blue,1,-90,-170\n
+BLOCK,red,1,24,-8\n
+BLOCK,unknown,0,0,0\n
+```
+
+电控 MUST 按逗号拆成5个字段，并检查第一个字段严格等于 `BLOCK`。未找到时 `color=unknown`、`found=0`，此时 `dx`、`dy` 固定为0。
+
+### 6.8 错误返回
 
 Function 已经匹配但执行失败时，UART 可能收到以下形式的英文文本：
 
@@ -328,8 +357,9 @@ IDLE
 |---|---:|
 | Debug | 2秒 |
 | 颜色识别 | 15秒 |
-| 十字/黑环识别 | 15秒 |
+| 同心圆环/黑环识别 | 15秒 |
 | A/B/C 字母识别 | 15秒 |
+| 彩色柱定位 | 15秒 |
 | 二维码识别 | 30秒 |
 
 这些是电控侧建议值，不是线协议字段。实际项目可根据摄像头帧率和 `max_frames` 调整。
@@ -343,9 +373,10 @@ IDLE
 typedef enum {
     RUBO_CMD_COLOR      = 0x01,
     RUBO_CMD_QR         = 0x02,
-    RUBO_CMD_CROSS      = 0x03,
+    RUBO_CMD_CONCENTRIC_RING      = 0x03,
     RUBO_CMD_BLACK_RING = 0x04,
     RUBO_CMD_LETTER     = 0x05,
+    RUBO_CMD_COLOR_BLOCK = 0x06,
     RUBO_CMD_DEBUG      = 0x31,
 } RuboCommand;
 
@@ -519,6 +550,9 @@ pending = BLACK_RING:
 pending = LETTER:
     只接受 A、B、C
 
+pending = COLOR_BLOCK:
+    必须匹配 BLOCK,color,found,dx,dy
+
 任意 pending:
     Function:/Runtime:/Dispatch: 开头 -> 失败
     其他格式 -> 协议错误
@@ -542,9 +576,10 @@ import serial
 COMMANDS = {
     "color": 0x01,
     "qr": 0x02,
-    "cross": 0x03,
+    "concentric_ring": 0x03,
     "black_ring": 0x04,
     "letter": 0x05,
+    "color_block": 0x06,
     "debug": 0x31,
 }
 
@@ -578,9 +613,10 @@ debug success
 | `61 31 0D 0A` | 执行 `debug_fun`，返回 `debug success\n` |
 | `61 01 0D 0A` | 执行颜色识别 |
 | `61 02 0D 0A` | 执行二维码识别 |
-| `61 03 0D 0A` | 执行十字识别 |
+| `61 03 0D 0A` | 执行同心圆环识别 |
 | `61 04 0D 0A` | 执行黑环识别 |
 | `61 05 0D 0A` | 执行 A/B/C 字母识别，成功时返回 `A\n`、`B\n` 或 `C\n` |
+| `61 06 0D 0A` | 执行彩色柱定位，返回 `BLOCK,<color>,<found>,<dx>,<dy>\n` |
 
 ### 12.2 必须拒绝或不触发目标 Function
 

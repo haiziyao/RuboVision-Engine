@@ -91,6 +91,148 @@
     "debug": true
   },
   {
+    "binding": "uart_color_block_detect",
+    "source": {
+      "id": "uart",
+      "event": "6",
+      "kind": "uart",
+      "config": {
+        "baud": 115200,
+        "content_bytes": 1,
+        "data_bit": 8,
+        "parity_bit": false,
+        "prefix": [
+          97
+        ],
+        "serial": "/tmp/rubo-uart",
+        "stop_bit": 1,
+        "suffix": [
+          13,
+          10
+        ]
+      }
+    },
+    "function": {
+      "id": "color_block_detect",
+      "config": {
+        "close_kernel_size": 5,
+        "colors": [
+          {
+            "hsv_ranges": [
+              [
+                0,
+                10,
+                160,
+                255,
+                110,
+                255
+              ],
+              [
+                170,
+                179,
+                160,
+                255,
+                110,
+                255
+              ]
+            ],
+            "name": "red"
+          },
+          {
+            "hsv_ranges": [
+              [
+                100,
+                137,
+                124,
+                255,
+                56,
+                255
+              ]
+            ],
+            "name": "blue"
+          },
+          {
+            "hsv_ranges": [
+              [
+                50,
+                100,
+                91,
+                255,
+                85,
+                255
+              ]
+            ],
+            "name": "green"
+          },
+          {
+            "hsv_ranges": [
+              [
+                0,
+                179,
+                0,
+                255,
+                0,
+                76
+              ]
+            ],
+            "name": "black"
+          },
+          {
+            "hsv_ranges": [
+              [
+                0,
+                84,
+                0,
+                43,
+                180,
+                225
+              ]
+            ],
+            "name": "white"
+          }
+        ],
+        "device_id": "road",
+        "edge_margin": 5,
+        "max_area_ratio": 0.45,
+        "max_frames": 3,
+        "min_area": 1500.0,
+        "open_kernel_size": 5,
+        "target_correction": {
+          "x": 0,
+          "y": 0
+        }
+      }
+    },
+    "devices": [
+      {
+        "id": "road",
+        "kind": "camera",
+        "config": {
+          "path": "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:4:1.0-video-index0"
+        }
+      }
+    ],
+    "sinks": [
+      {
+        "id": "web",
+        "kind": "web",
+        "config": {}
+      },
+      {
+        "id": "uart",
+        "kind": "uart",
+        "config": {
+          "baud": 115200,
+          "data_bit": 8,
+          "parity_bit": false,
+          "serial": "/tmp/rubo-uart",
+          "stop_bit": 1
+        }
+      }
+    ],
+    "debug": true
+  },
+  {
     "binding": "uart_color_detect",
     "source": {
       "id": "uart",
@@ -180,11 +322,11 @@
             "hsv_ranges": [
               [
                 0,
-                170,
+                84,
                 0,
-                55,
-                120,
-                255
+                43,
+                180,
+                225
               ]
             ],
             "name": "white"
@@ -227,7 +369,7 @@
     "debug": true
   },
   {
-    "binding": "uart_cross_detect",
+    "binding": "uart_concentric_ring_detect",
     "source": {
       "id": "uart",
       "event": "3",
@@ -249,7 +391,7 @@
       }
     },
     "function": {
-      "id": "cross",
+      "id": "concentric_ring",
       "config": {
         "black_threshold": 90,
         "center_tolerance": 14.0,

@@ -16,7 +16,7 @@ struct TargetCorrection {
 
 #[derive(Debug, Clone)]
 #[cfg_attr(not(feature = "opencv"), allow(dead_code))]
-struct CrossParameters {
+struct ConcentricRingParameters {
     device_id: String,
     max_frames: usize,
     target_correction: TargetCorrection,
@@ -31,7 +31,7 @@ struct CrossParameters {
     min_ring_score: u8,
 }
 
-impl CrossParameters {
+impl ConcentricRingParameters {
     fn from_config(config: &FuncConfig) -> Result<Self, FunctionError> {
         let parameters = Self {
             device_id: config.get("device_id")?,
@@ -54,17 +54,17 @@ impl CrossParameters {
     fn validate(&self) -> Result<(), FunctionError> {
         if self.device_id.trim().is_empty() {
             return Err(FunctionError::Config {
-                message: "cross.device_id cannot be empty".to_string(),
+                message: "concentric_ring.device_id cannot be empty".to_string(),
             });
         }
         if self.max_frames == 0 {
             return Err(FunctionError::Config {
-                message: "cross.max_frames must be greater than 0".to_string(),
+                message: "concentric_ring.max_frames must be greater than 0".to_string(),
             });
         }
         if !(0..=255).contains(&self.black_threshold) {
             return Err(FunctionError::Config {
-                message: "cross.black_threshold must be between 0 and 255".to_string(),
+                message: "concentric_ring.black_threshold must be between 0 and 255".to_string(),
             });
         }
         for (name, size) in [
@@ -73,13 +73,13 @@ impl CrossParameters {
         ] {
             if size <= 0 || size % 2 == 0 {
                 return Err(FunctionError::Config {
-                    message: format!("cross.{name} must be a positive odd number"),
+                    message: format!("concentric_ring.{name} must be a positive odd number"),
                 });
             }
         }
         if self.dilate_iterations < 0 {
             return Err(FunctionError::Config {
-                message: "cross.dilate_iterations cannot be negative".to_string(),
+                message: "concentric_ring.dilate_iterations cannot be negative".to_string(),
             });
         }
         if !self.min_radius.is_finite()
@@ -88,22 +88,23 @@ impl CrossParameters {
             || self.max_radius < self.min_radius
         {
             return Err(FunctionError::Config {
-                message: "cross radii must be finite, positive, and ordered".to_string(),
+                message: "concentric_ring radii must be finite, positive, and ordered".to_string(),
             });
         }
         if !self.center_tolerance.is_finite() || self.center_tolerance <= 0.0 {
             return Err(FunctionError::Config {
-                message: "cross.center_tolerance must be finite and greater than 0".to_string(),
+                message: "concentric_ring.center_tolerance must be finite and greater than 0"
+                    .to_string(),
             });
         }
         if self.min_arc_points < 3 {
             return Err(FunctionError::Config {
-                message: "cross.min_arc_points must be at least 3".to_string(),
+                message: "concentric_ring.min_arc_points must be at least 3".to_string(),
             });
         }
         if self.min_ring_score > 100 {
             return Err(FunctionError::Config {
-                message: "cross.min_ring_score must be at most 100".to_string(),
+                message: "concentric_ring.min_ring_score must be at most 100".to_string(),
             });
         }
         Ok(())
@@ -111,7 +112,7 @@ impl CrossParameters {
 }
 
 #[cfg(feature = "opencv")]
-struct CrossFrameResult {
+struct ConcentricRingFrameResult {
     found: bool,
     dx: i32,
     dy: i32,
@@ -138,10 +139,10 @@ struct RingGroup {
 }
 
 #[cfg(feature = "opencv")]
-fn analyze_cross_frame(
+fn analyze_concentric_ring_frame(
     frame: &opencv::core::Mat,
-    parameters: &CrossParameters,
-) -> opencv::Result<CrossFrameResult> {
+    parameters: &ConcentricRingParameters,
+) -> opencv::Result<ConcentricRingFrameResult> {
     use opencv::{core, imgproc, prelude::*};
 
     let gray = crate::vision::util::bgr_to_gray(frame)?;
@@ -173,7 +174,7 @@ fn analyze_cross_frame(
         }
         None => (false, 0, 0, 0),
     };
-    let value = format_cross_value(found, dx, dy, score);
+    let value = format_concentric_ring_value(found, dx, dy, score);
     imgproc::put_text(
         &mut annotated,
         &value,
@@ -185,7 +186,7 @@ fn analyze_cross_frame(
         imgproc::LINE_AA,
         false,
     )?;
-    Ok(CrossFrameResult {
+    Ok(ConcentricRingFrameResult {
         found,
         dx,
         dy,
@@ -199,7 +200,7 @@ fn analyze_cross_frame(
 #[cfg(feature = "opencv")]
 fn make_black_mask(
     gray: &opencv::core::Mat,
-    parameters: &CrossParameters,
+    parameters: &ConcentricRingParameters,
 ) -> opencv::Result<opencv::core::Mat> {
     use opencv::{core, imgproc};
 
@@ -260,7 +261,7 @@ fn make_black_mask(
 #[cfg(feature = "opencv")]
 fn ring_candidates(
     black_mask: &opencv::core::Mat,
-    parameters: &CrossParameters,
+    parameters: &ConcentricRingParameters,
 ) -> opencv::Result<Vec<RingCandidate>> {
     use opencv::{core, imgproc, types};
 
@@ -288,7 +289,7 @@ fn ring_candidates(
 #[cfg(feature = "opencv")]
 fn fit_ring_candidate(
     contour: &opencv::types::VectorOfPoint,
-    parameters: &CrossParameters,
+    parameters: &ConcentricRingParameters,
 ) -> opencv::Result<Option<RingCandidate>> {
     use std::f64::consts::TAU;
 
@@ -407,7 +408,7 @@ fn solve_3x3(mut matrix: [[f64; 4]; 3]) -> Option<[f64; 3]> {
 #[cfg(feature = "opencv")]
 fn best_ring_group(
     candidates: &[RingCandidate],
-    parameters: &CrossParameters,
+    parameters: &ConcentricRingParameters,
 ) -> Option<RingGroup> {
     candidates
         .iter()
@@ -419,7 +420,7 @@ fn best_ring_group(
 fn score_ring_group(
     seed: &RingCandidate,
     candidates: &[RingCandidate],
-    parameters: &CrossParameters,
+    parameters: &ConcentricRingParameters,
 ) -> Option<RingGroup> {
     use std::f64::consts::TAU;
 
@@ -519,7 +520,7 @@ fn draw_marker(
 }
 
 #[cfg(feature = "opencv")]
-fn format_cross_value(found: bool, dx: i32, dy: i32, score: u8) -> String {
+fn format_concentric_ring_value(found: bool, dx: i32, dy: i32, score: u8) -> String {
     if found {
         format!("CROSS,0,1,{dx},{dy},{score}")
     } else {
@@ -528,69 +529,70 @@ fn format_cross_value(found: bool, dx: i32, dy: i32, score: u8) -> String {
 }
 
 #[cfg(feature = "opencv")]
-async fn detect_cross(
+async fn detect_concentric_ring(
     camera: std::sync::Arc<CameraDevice>,
-    parameters: &CrossParameters,
-) -> Result<CrossFrameResult, FunctionError> {
+    parameters: &ConcentricRingParameters,
+) -> Result<ConcentricRingFrameResult, FunctionError> {
     let mut best = None;
     for _ in 0..parameters.max_frames {
         let frame = camera.frame().await?;
         let frame_parameters = parameters.clone();
-        let result =
-            tokio::task::spawn_blocking(move || analyze_cross_frame(&frame, &frame_parameters))
-                .await
-                .map_err(|error| FunctionError::Call {
-                    message: format!("cross task failed: {error}"),
-                })?
-                .map_err(|error| FunctionError::Call {
-                    message: error.to_string(),
-                })?;
+        let result = tokio::task::spawn_blocking(move || {
+            analyze_concentric_ring_frame(&frame, &frame_parameters)
+        })
+        .await
+        .map_err(|error| FunctionError::Call {
+            message: format!("concentric_ring task failed: {error}"),
+        })?
+        .map_err(|error| FunctionError::Call {
+            message: error.to_string(),
+        })?;
         if best
             .as_ref()
-            .is_none_or(|current: &CrossFrameResult| result.score > current.score)
+            .is_none_or(|current: &ConcentricRingFrameResult| result.score > current.score)
         {
             best = Some(result);
         }
     }
     best.ok_or_else(|| FunctionError::Call {
-        message: "cross received no camera frames".to_string(),
+        message: "concentric_ring received no camera frames".to_string(),
     })
 }
 
-#[rubo_engine::function(id = "cross")]
+#[rubo_engine::function(id = "concentric_ring")]
 #[derive(Default)]
-pub struct CrossDetect;
+pub struct ConcentricRingDetect;
 
 #[async_trait]
-impl Function for CrossDetect {
+impl Function for ConcentricRingDetect {
     async fn call(&self, call: FunctionCall<'_>) -> Result<FuncResult, FunctionError> {
-        let parameters = CrossParameters::from_config(call.function_config())?;
+        let parameters = ConcentricRingParameters::from_config(call.function_config())?;
         let camera = call.devices().get::<CameraDevice>(&parameters.device_id)?;
-        run_cross_detect(camera, &parameters, call.image_enabled()).await
+        run_concentric_ring_detect(camera, &parameters, call.image_enabled()).await
     }
 }
 
 #[cfg(not(feature = "opencv"))]
-async fn run_cross_detect(
+async fn run_concentric_ring_detect(
     _camera: std::sync::Arc<CameraDevice>,
-    _parameters: &CrossParameters,
+    _parameters: &ConcentricRingParameters,
     _image_enabled: bool,
 ) -> Result<FuncResult, FunctionError> {
     Err(FunctionError::Call {
-        message: crate::tool::opencv_disabled_message("cross"),
+        message: crate::tool::opencv_disabled_message("concentric_ring"),
     })
 }
 
 #[cfg(feature = "opencv")]
-async fn run_cross_detect(
+async fn run_concentric_ring_detect(
     camera: std::sync::Arc<CameraDevice>,
-    parameters: &CrossParameters,
+    parameters: &ConcentricRingParameters,
     image_enabled: bool,
 ) -> Result<FuncResult, FunctionError> {
-    let result = detect_cross(camera, parameters).await?;
-    let value = format_cross_value(result.found, result.dx, result.dy, result.score);
+    let result = detect_concentric_ring(camera, parameters).await?;
+    let value = format_concentric_ring_value(result.found, result.dx, result.dy, result.score);
     let mut output = serde_json::json!({
-        "text": format!("cross finished: {value}"),
+        "text": format!("concentric_ring finished: {value}"),
         "value": value,
         "found": result.found,
         "dx": result.dx,
@@ -614,48 +616,58 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    async fn test_cross() {
+    async fn test_concentric_ring() {
         let (config, camera) = crate::vision::test::load_camera("road")
             .await
-            .expect("load cross camera");
-        let camera = camera.get::<CameraDevice>().expect("get cross camera");
-        let parameters =
-            CrossParameters::from_config(&config.funcs()["cross"]).expect("load cross config");
-        let result = detect_cross(camera, &parameters)
+            .expect("load concentric_ring camera");
+        let camera = camera
+            .get::<CameraDevice>()
+            .expect("get concentric_ring camera");
+        let parameters = ConcentricRingParameters::from_config(&config.funcs()["concentric_ring"])
+            .expect("load concentric_ring config");
+        let result = detect_concentric_ring(camera, &parameters)
             .await
-            .expect("detect cross");
+            .expect("detect concentric_ring");
         println!(
             "{}",
-            format_cross_value(result.found, result.dx, result.dy, result.score)
+            format_concentric_ring_value(result.found, result.dx, result.dy, result.score)
         );
     }
 
     #[tokio::test]
-    async fn test_cross_show() {
+    async fn test_concentric_ring_show() {
         let (config, camera) = crate::vision::test::load_camera("road")
             .await
-            .expect("load cross camera");
-        let camera = camera.get::<CameraDevice>().expect("get cross camera");
-        let parameters =
-            CrossParameters::from_config(&config.funcs()["cross"]).expect("load cross config");
+            .expect("load concentric_ring camera");
+        let camera = camera
+            .get::<CameraDevice>()
+            .expect("get concentric_ring camera");
+        let parameters = ConcentricRingParameters::from_config(&config.funcs()["concentric_ring"])
+            .expect("load concentric_ring config");
         loop {
-            let frame = camera.frame().await.expect("read cross frame");
-            let frame_for_analysis = frame.try_clone().expect("clone cross frame");
+            let frame = camera.frame().await.expect("read concentric_ring frame");
+            let frame_for_analysis = frame.try_clone().expect("clone concentric_ring frame");
             let frame_parameters = parameters.clone();
             let result = tokio::task::spawn_blocking(move || {
-                analyze_cross_frame(&frame_for_analysis, &frame_parameters)
+                analyze_concentric_ring_frame(&frame_for_analysis, &frame_parameters)
             })
             .await
-            .expect("join cross analysis")
-            .expect("analyze cross frame");
-            let value = format_cross_value(result.found, result.dx, result.dy, result.score);
-            let display = crate::vision::test::annotate_result(&result.frame, "CROSS", &value)
-                .expect("annotate cross result");
-            highgui::imshow("cross.original", &frame).expect("show cross original");
-            highgui::imshow("cross.gray", &result.gray).expect("show cross gray");
-            highgui::imshow("cross.mask", &result.black_mask).expect("show cross mask");
-            highgui::imshow("cross.result", &display).expect("show cross result");
-            let key = highgui::wait_key(1).expect("wait for cross key") & 0xff;
+            .expect("join concentric_ring analysis")
+            .expect("analyze concentric_ring frame");
+            let value =
+                format_concentric_ring_value(result.found, result.dx, result.dy, result.score);
+            let display =
+                crate::vision::test::annotate_result(&result.frame, "CONCENTRIC RING", &value)
+                    .expect("annotate concentric_ring result");
+            highgui::imshow("concentric_ring.original", &frame)
+                .expect("show concentric_ring original");
+            highgui::imshow("concentric_ring.gray", &result.gray)
+                .expect("show concentric_ring gray");
+            highgui::imshow("concentric_ring.mask", &result.black_mask)
+                .expect("show concentric_ring mask");
+            highgui::imshow("concentric_ring.result", &display)
+                .expect("show concentric_ring result");
+            let key = highgui::wait_key(1).expect("wait for concentric_ring key") & 0xff;
             if key == 113 || key == 27 {
                 break;
             }

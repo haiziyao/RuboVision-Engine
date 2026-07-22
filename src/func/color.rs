@@ -8,8 +8,8 @@ use serde::Deserialize;
 use crate::device::CameraDevice;
 
 #[derive(Debug, Clone, Deserialize)]
-struct ColorDefinition {
-    name: String,
+pub(super) struct ColorDefinition {
+    pub(super) name: String,
     #[serde(default)]
     output: Option<String>,
     hsv_ranges: Vec<[i32; 6]>,
@@ -17,9 +17,71 @@ struct ColorDefinition {
 
 impl ColorDefinition {
     #[cfg(feature = "opencv")]
-    fn output(&self) -> &str {
+    pub(super) fn output(&self) -> &str {
         self.output.as_deref().unwrap_or(&self.name)
     }
+
+    pub(super) fn validate(&self, function_id: &str) -> Result<(), FunctionError> {
+        if self.name.trim().is_empty() {
+            return Err(FunctionError::Config {
+                message: format!("{function_id} color name cannot be empty"),
+            });
+        }
+        if self
+            .output
+            .as_ref()
+            .is_some_and(|output| output.trim().is_empty())
+        {
+            return Err(FunctionError::Config {
+                message: format!("{function_id} color `{}` output cannot be empty", self.name),
+            });
+        }
+        if self.hsv_ranges.is_empty() {
+            return Err(FunctionError::Config {
+                message: format!(
+                    "{function_id} color `{}` must contain at least one HSV range",
+                    self.name
+                ),
+            });
+        }
+        for range in &self.hsv_ranges {
+            let valid_h = (0..=179).contains(&range[0])
+                && (0..=179).contains(&range[1])
+                && range[0] <= range[1];
+            let valid_s = (0..=255).contains(&range[2])
+                && (0..=255).contains(&range[3])
+                && range[2] <= range[3];
+            let valid_v = (0..=255).contains(&range[4])
+                && (0..=255).contains(&range[5])
+                && range[4] <= range[5];
+            if !valid_h || !valid_s || !valid_v {
+                return Err(FunctionError::Config {
+                    message: format!(
+                        "{function_id} color `{}` contains an invalid HSV range",
+                        self.name
+                    ),
+                });
+            }
+        }
+        Ok(())
+    }
+}
+
+#[cfg(feature = "opencv")]
+pub(super) fn color_mask(
+    hsv: &opencv::core::Mat,
+    color: &ColorDefinition,
+) -> opencv::Result<opencv::core::Mat> {
+    use opencv::core;
+
+    let mut mask = crate::vision::util::hsv_mask(hsv, color.hsv_ranges[0])?;
+    for range in color.hsv_ranges.iter().skip(1) {
+        let range_mask = crate::vision::util::hsv_mask(hsv, *range)?;
+        let mut merged = core::Mat::default();
+        core::bitwise_or(&mask, &range_mask, &mut merged, &core::no_array())?;
+        mask = merged;
+    }
+    Ok(mask)
 }
 
 #[cfg(feature = "opencv")]
@@ -90,47 +152,7 @@ impl ColorParameters {
             });
         }
         for color in &self.colors {
-            if color.name.trim().is_empty() {
-                return Err(FunctionError::Config {
-                    message: "color_detect color name cannot be empty".to_string(),
-                });
-            }
-            if color
-                .output
-                .as_ref()
-                .is_some_and(|output| output.trim().is_empty())
-            {
-                return Err(FunctionError::Config {
-                    message: format!("color_detect color `{}` output cannot be empty", color.name),
-                });
-            }
-            if color.hsv_ranges.is_empty() {
-                return Err(FunctionError::Config {
-                    message: format!(
-                        "color_detect color `{}` must contain at least one HSV range",
-                        color.name
-                    ),
-                });
-            }
-            for range in &color.hsv_ranges {
-                let valid_h = (0..=179).contains(&range[0])
-                    && (0..=179).contains(&range[1])
-                    && range[0] <= range[1];
-                let valid_s = (0..=255).contains(&range[2])
-                    && (0..=255).contains(&range[3])
-                    && range[2] <= range[3];
-                let valid_v = (0..=255).contains(&range[4])
-                    && (0..=255).contains(&range[5])
-                    && range[4] <= range[5];
-                if !valid_h || !valid_s || !valid_v {
-                    return Err(FunctionError::Config {
-                        message: format!(
-                            "color_detect color `{}` contains an invalid HSV range",
-                            color.name
-                        ),
-                    });
-                }
-            }
+            color.validate("color_detect")?;
         }
         Ok(())
     }
@@ -168,13 +190,7 @@ fn analyze_color_frame(
     let mut best_ratio = -1.0_f64;
 
     for (index, color) in parameters.colors.iter().enumerate() {
-        let mut merged_mask = crate::vision::util::hsv_mask(&hsv, color.hsv_ranges[0])?;
-        for range in color.hsv_ranges.iter().skip(1) {
-            let range_mask = crate::vision::util::hsv_mask(&hsv, *range)?;
-            let mut combined = core::Mat::default();
-            core::bitwise_or(&merged_mask, &range_mask, &mut combined, &core::no_array())?;
-            merged_mask = combined;
-        }
+        let merged_mask = color_mask(&hsv, color)?;
         let mask = crate::vision::util::mask_in_roi(&merged_mask, &roi_mask)?;
         let ratio = crate::vision::util::mask_ratio(&mask, &roi_mask)?;
         if ratio > best_ratio {
@@ -403,7 +419,44 @@ mod tests {
         let camera = camera.get::<CameraDevice>().expect("get color camera");
         let parameters = ColorParameters::from_config(&config.funcs()["color_detect"])
             .expect("load color config");
-        let initial = parameters.colors[0].hsv_ranges[0];
+        let selected_name = std::env::var("HSV_COLOR").unwrap_or_else(|_| "red".to_string());
+        let selected_color = parameters
+            .colors
+            .iter()
+            .find(|color| color.name == selected_name)
+            .unwrap_or_else(|| {
+                panic!(
+                    "unknown HSV_COLOR={selected_name}; expected one of: {}",
+                    parameters
+                        .colors
+                        .iter()
+                        .map(|color| color.name.as_str())
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            });
+        let selected_range = std::env::var("HSV_RANGE")
+            .ok()
+            .map(|value| {
+                value
+                    .parse::<usize>()
+                    .expect("HSV_RANGE must be an integer")
+            })
+            .unwrap_or(0);
+        let initial = *selected_color
+            .hsv_ranges
+            .get(selected_range)
+            .unwrap_or_else(|| {
+                panic!(
+                    "HSV_RANGE={selected_range} is out of range for {}; available: 0..{}",
+                    selected_color.name,
+                    selected_color.hsv_ranges.len()
+                )
+            });
+        println!(
+            "tuning HSV color: {} range: {}",
+            selected_color.name, selected_range
+        );
         let mut h_min = initial[0];
         let mut h_max = initial[1];
         let mut s_min = initial[2];
@@ -438,7 +491,10 @@ mod tests {
                 highgui::get_trackbar_pos("V max", "hsv.controls").expect("read V max"),
             ];
             if previous != Some(range) {
-                println!("hsv_ranges = [{range:?}]");
+                println!(
+                    "{} hsv_ranges[{selected_range}] = {range:?}",
+                    selected_color.name
+                );
                 previous = Some(range);
             }
             let (roi, roi_mask) = crate::vision::util::circle_roi(&frame, parameters.radius_ratio)

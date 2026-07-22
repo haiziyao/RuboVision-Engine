@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Rebuild QR, BlackRing, and Cross according to `doc/vision_color_refactor.md` while preserving the existing UART result protocol.
+**Goal:** Rebuild QR, BlackRing, and ConcentricRing according to `doc/vision_color_refactor.md` while preserving the existing UART result protocol.
 
 **Architecture:** Each `src/func/*.rs` file owns its strict parameters, single-frame core, Camera-backed multi-frame core, framework adapter, and manually clickable OpenCV tests. Generic OpenCV transforms live in `src/vision/util.rs`; after migration, the monolithic `src/vision/detect.rs` is removed.
 
@@ -188,10 +188,10 @@ Run: `cargo test config::tests::default_rubo_config_test`
 
 Expected: PASS.
 
-### Task 4: Rebuild Cross
+### Task 4: Rebuild ConcentricRing
 
 **Files:**
-- Modify: `src/func/cross.rs`
+- Modify: `src/func/concentric_ring.rs`
 - Modify: `config/orangepi/function.toml`
 - Modify: `config/raspberrypi/function.toml`
 - Modify: `src/config.rs`
@@ -199,7 +199,7 @@ Expected: PASS.
 - [ ] **Step 1: Define strict concentric-ring parameters**
 
 ```rust
-struct CrossParameters {
+struct ConcentricRingParameters {
     device_id: String,
     max_frames: usize,
     target_correction: TargetCorrection,
@@ -217,10 +217,10 @@ struct CrossParameters {
 
 Require positive odd kernels, nonnegative dilation count, valid thresholds/radii/tolerance, at least three arc points, and score `0..=100`.
 
-- [ ] **Step 2: Move only concentric-ring analysis into Cross**
+- [ ] **Step 2: Move only concentric-ring analysis into ConcentricRing**
 
 ```rust
-struct CrossFrameResult {
+struct ConcentricRingFrameResult {
     found: bool,
     dx: i32,
     dy: i32,
@@ -230,10 +230,10 @@ struct CrossFrameResult {
     frame: Mat,
 }
 
-fn analyze_cross_frame(
+fn analyze_concentric_ring_frame(
     frame: &Mat,
-    parameters: &CrossParameters,
-) -> opencv::Result<CrossFrameResult>;
+    parameters: &ConcentricRingParameters,
+) -> opencv::Result<ConcentricRingFrameResult>;
 ```
 
 Remove colored-cylinder candidates, `runtime_param`, message fallback, and colors. Preserve circular-arc fitting and concentric-group scoring.
@@ -246,15 +246,15 @@ Return `CROSS,0,0,0,0,0` or `CROSS,0,1,<dx>,<dy>,<score>`. JSON includes `value`
 
 ```rust
 #[tokio::test]
-async fn test_cross();
+async fn test_concentric_ring();
 
 #[tokio::test]
-async fn test_cross_show();
+async fn test_concentric_ring_show();
 ```
 
 The display entry shows original, grayscale, final black mask, and annotated frame.
 
-- [ ] **Step 5: Remove Cross colors and synchronize both profiles/code config**
+- [ ] **Step 5: Remove ConcentricRing colors and synchronize both profiles/code config**
 
 Run: `cargo test config::tests::default_rubo_config_test`
 
@@ -268,7 +268,7 @@ Expected: PASS.
 
 - [ ] **Step 1: Confirm no references remain**
 
-Run: `rg "vision::detect|ColorDetectConfig|BlackRingDetectConfig|CrossDetectConfig" src`
+Run: `rg "vision::detect|ColorDetectConfig|BlackRingDetectConfig|ConcentricRingDetectConfig" src`
 
 Expected: no matches.
 
@@ -306,4 +306,4 @@ Expected: both succeed without OpenCV installed.
 
 - [ ] **Step 3: Record required Linux/OpenCV verification**
 
-On the Ubuntu/OpenCV target, manually run `test_qr`, `test_qr_show`, `test_black_ring`, `test_black_ring_show`, `test_cross`, and `test_cross_show`. No OpenCV installation or download is performed on the current Windows environment.
+On the Ubuntu/OpenCV target, manually run `test_qr`, `test_qr_show`, `test_black_ring`, `test_black_ring_show`, `test_concentric_ring`, and `test_concentric_ring_show`. No OpenCV installation or download is performed on the current Windows environment.

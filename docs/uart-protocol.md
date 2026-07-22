@@ -27,10 +27,16 @@ Every request is four bytes:
 | --- | --- | --- |
 | `"1"` | `0x01` | Color detection |
 | `"2"` | `0x02` | QR detection |
-| `"3"` | `0x03` | Cross detection |
+| `"3"` | `0x03` | Concentric-ring positioning |
 | `"4"` | `0x04` | Black-ring detection |
 | `"5"` | `0x05` | Letter detection |
+| `"6"` | `0x06` | Colored-column positioning |
 | `"49"` | `0x31` (`'1'`) | Debug |
 
-Visual commands use raw binary bytes `0x01` through `0x05`, not ASCII digits.
+Visual commands use raw binary bytes `0x01` through `0x06`, not ASCII digits.
 The debug command is the separate ASCII byte `0x31`.
+
+Colored-column positioning returns `BLOCK,<color>,<found>,<dx>,<dy>\n`.
+Positive `dx` means right of the configured target point; positive `dy` means
+below it. The current color names are `red`, `blue`, `green`, `black`, and
+`white`; a miss returns `BLOCK,unknown,0,0,0`.

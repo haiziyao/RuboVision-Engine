@@ -152,6 +152,19 @@ fn insert_devices(config: &mut RuboConfig, platform: Platform) {
 
 fn insert_functions(config: &mut RuboConfig) {
     config.funcs_mut().insert(
+        "color_block_detect".to_string(),
+        FuncConfig::new("color_block_detect")
+            .set("device_id", ROAD_CAMERA_ID)
+            .set("max_frames", 3_usize)
+            .set("target_correction", default_target_correction())
+            .set("colors", default_colors())
+            .set("open_kernel_size", 5_i32)
+            .set("close_kernel_size", 5_i32)
+            .set("min_area", 1_500.0_f64)
+            .set("max_area_ratio", 0.45_f64)
+            .set("edge_margin", 5_i32),
+    );
+    config.funcs_mut().insert(
         "color_detect".to_string(),
         FuncConfig::new("color_detect")
             .set("device_id", ROAD_CAMERA_ID)
@@ -189,8 +202,8 @@ fn insert_functions(config: &mut RuboConfig) {
             .set("min_score", 50_u8),
     );
     config.funcs_mut().insert(
-        "cross".to_string(),
-        FuncConfig::new("cross")
+        "concentric_ring".to_string(),
+        FuncConfig::new("concentric_ring")
             .set("device_id", ROAD_CAMERA_ID)
             .set("max_frames", 3_usize)
             .set("target_correction", default_target_correction())
@@ -253,7 +266,13 @@ fn insert_bindings(config: &mut RuboConfig) {
         "color_detect",
     );
     insert_uart_binding(config, "uart_qr_detect", "2", TASK_CAMERA_ID, "qr_detect");
-    insert_uart_binding(config, "uart_cross_detect", "3", ROAD_CAMERA_ID, "cross");
+    insert_uart_binding(
+        config,
+        "uart_concentric_ring_detect",
+        "3",
+        ROAD_CAMERA_ID,
+        "concentric_ring",
+    );
     insert_uart_binding(
         config,
         "uart_black_ring_detect",
@@ -267,6 +286,13 @@ fn insert_bindings(config: &mut RuboConfig) {
         "5",
         ROAD_CAMERA_ID,
         "letter_detect",
+    );
+    insert_uart_binding(
+        config,
+        "uart_color_block_detect",
+        "6",
+        ROAD_CAMERA_ID,
+        "color_block_detect",
     );
     config.bindings_mut().insert(
         "debug".to_string(),
@@ -315,7 +341,7 @@ fn default_colors() -> Vec<serde_json::Value> {
         color_definition("blue", vec![[100, 137, 124, 255, 56, 255]]),
         color_definition("green", vec![[50, 100, 91, 255, 85, 255]]),
         color_definition("black", vec![[0, 179, 0, 255, 0, 76]]),
-        color_definition("white", vec![[0, 170, 0, 55, 120, 255]]),
+        color_definition("white", vec![[0, 84, 0, 43, 180, 225]]),
     ]
 }
 
@@ -419,13 +445,14 @@ mod tests {
                 .unwrap(),
             1
         );
-        assert_eq!(config.bindings().len(), 7);
+        assert_eq!(config.bindings().len(), 8);
         for id in [
             "uart_color_detect",
             "uart_qr_detect",
-            "uart_cross_detect",
+            "uart_concentric_ring_detect",
             "uart_black_ring_detect",
             "uart_letter_detect",
+            "uart_color_block_detect",
         ] {
             assert!(config.bindings()[id].debug_enabled());
             let expected_device = if id == "uart_qr_detect" {
@@ -462,13 +489,13 @@ mod tests {
 
         let mut engine = build_engine(".", raspberrypi_app, config);
         engine.prepare_web();
-        assert_eq!(engine.config().bindings().len(), 7);
+        assert_eq!(engine.config().bindings().len(), 8);
         let runtime_config = engine.web_state().unwrap().runtime_config();
         let runtime_config = runtime_config
             .read()
             .expect("test runtime config lock poisoned");
         assert!(runtime_config.validate());
-        assert_eq!(runtime_config.bindings().len(), 13);
+        assert_eq!(runtime_config.bindings().len(), 15);
 
         let orangepi_app: AppConfig = serde_json::from_value(serde_json::json!({
             "config_path": "config",
