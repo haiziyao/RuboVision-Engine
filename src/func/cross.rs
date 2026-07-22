@@ -615,7 +615,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("road")
             .await
             .expect("load cross camera");
         let camera = camera.get::<CameraDevice>().expect("get cross camera");
@@ -632,7 +632,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_cross_show() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("road")
             .await
             .expect("load cross camera");
         let camera = camera.get::<CameraDevice>().expect("get cross camera");

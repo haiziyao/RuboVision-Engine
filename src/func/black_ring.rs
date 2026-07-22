@@ -369,7 +369,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_black_ring() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("road")
             .await
             .expect("load black ring camera");
         let camera = camera.get::<CameraDevice>().expect("get black ring camera");
@@ -386,7 +386,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_black_ring_show() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("road")
             .await
             .expect("load black ring camera");
         let camera = camera.get::<CameraDevice>().expect("get black ring camera");

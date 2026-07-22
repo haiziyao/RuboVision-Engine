@@ -300,7 +300,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_color() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("road")
             .await
             .expect("load color camera");
         let camera = camera.get::<CameraDevice>().expect("get color camera");
@@ -314,7 +314,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_color_show() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("road")
             .await
             .expect("load color camera");
         let camera = camera.get::<CameraDevice>().expect("get color camera");
@@ -348,7 +348,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_hsv() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("road")
             .await
             .expect("load color camera");
         let camera = camera.get::<CameraDevice>().expect("get color camera");

@@ -9,7 +9,8 @@ use rubo_engine::{
 use crate::{device::GpioDevice, sink::HeadlessWebSink};
 
 pub const UART_SOURCE_ID: &str = "uart";
-pub const CAMERA_ID: &str = "camera";
+pub const TASK_CAMERA_ID: &str = "task";
+pub const ROAD_CAMERA_ID: &str = "road";
 pub const WEB_SINK_ID: &str = "web";
 pub const UART_SINK_ID: &str = "uart";
 pub const GPIO_SINK_ID: &str = "gpio";
@@ -55,14 +56,7 @@ pub fn default_rubo_config(app_config: &AppConfig) -> Result<RuboConfig, ConfigE
             "/dev/serial0"
         },
     );
-    insert_devices(
-        &mut config,
-        if orangepi {
-            "/dev/video0"
-        } else {
-            "/dev/video2"
-        },
-    );
+    insert_devices(&mut config, orangepi);
     insert_functions(&mut config);
     insert_sinks(&mut config, orangepi);
     insert_bindings(&mut config);
@@ -117,10 +111,28 @@ fn insert_sources(config: &mut RuboConfig, serial: &str) {
     );
 }
 
-fn insert_devices(config: &mut RuboConfig, path: &str) {
+fn insert_devices(config: &mut RuboConfig, orangepi: bool) {
     config.devices_mut().insert(
-        CAMERA_ID.to_string(),
-        DeviceConfig::new(CAMERA_ID, "camera").set("path", path),
+        TASK_CAMERA_ID.to_string(),
+        DeviceConfig::new(TASK_CAMERA_ID, "camera").set(
+            "path",
+            if orangepi {
+                "/dev/video0"
+            } else {
+                "/dev/v4l/by-path/platform-xhci-hcd.1-usb-0:2:1.0-video-index0"
+            },
+        ),
+    );
+    config.devices_mut().insert(
+        ROAD_CAMERA_ID.to_string(),
+        DeviceConfig::new(ROAD_CAMERA_ID, "camera").set(
+            "path",
+            if orangepi {
+                "/dev/video0"
+            } else {
+                "/dev/v4l/by-path/platform-xhci-hcd.0-usb-0:2:1.0-video-index0"
+            },
+        ),
     );
 }
 
@@ -128,7 +140,7 @@ fn insert_functions(config: &mut RuboConfig) {
     config.funcs_mut().insert(
         "color_detect".to_string(),
         FuncConfig::new("color_detect")
-            .set("device_id", CAMERA_ID)
+            .set("device_id", ROAD_CAMERA_ID)
             .set("max_frames", 30_usize)
             .set("confirm_frames", 5_usize)
             .set("radius_ratio", 0.4_f64)
@@ -138,13 +150,13 @@ fn insert_functions(config: &mut RuboConfig) {
     config.funcs_mut().insert(
         "qr_detect".to_string(),
         FuncConfig::new("qr_detect")
-            .set("device_id", CAMERA_ID)
+            .set("device_id", TASK_CAMERA_ID)
             .set("max_frames", 30_usize),
     );
     config.funcs_mut().insert(
         "letter_detect".to_string(),
         FuncConfig::new("letter_detect")
-            .set("device_id", CAMERA_ID)
+            .set("device_id", ROAD_CAMERA_ID)
             .set("max_frames", 30_usize)
             .set("confirm_frames", 3_usize)
             .set("black_threshold", 90_i32)
@@ -153,7 +165,7 @@ fn insert_functions(config: &mut RuboConfig) {
     config.funcs_mut().insert(
         "black_ring_detect".to_string(),
         FuncConfig::new("black_ring_detect")
-            .set("device_id", CAMERA_ID)
+            .set("device_id", ROAD_CAMERA_ID)
             .set("max_frames", 3_usize)
             .set("target_correction", default_target_correction())
             .set("black_threshold", 90_i32)
@@ -165,7 +177,7 @@ fn insert_functions(config: &mut RuboConfig) {
     config.funcs_mut().insert(
         "cross".to_string(),
         FuncConfig::new("cross")
-            .set("device_id", CAMERA_ID)
+            .set("device_id", ROAD_CAMERA_ID)
             .set("max_frames", 3_usize)
             .set("target_correction", default_target_correction())
             .set("black_threshold", 90_i32)
@@ -216,21 +228,27 @@ fn insert_sinks(config: &mut RuboConfig, orangepi: bool) {
 }
 
 fn insert_bindings(config: &mut RuboConfig) {
-    insert_uart_binding(config, "uart_color_detect", "1", CAMERA_ID, "color_detect");
-    insert_uart_binding(config, "uart_qr_detect", "2", CAMERA_ID, "qr_detect");
-    insert_uart_binding(config, "uart_cross_detect", "3", CAMERA_ID, "cross");
+    insert_uart_binding(
+        config,
+        "uart_color_detect",
+        "1",
+        ROAD_CAMERA_ID,
+        "color_detect",
+    );
+    insert_uart_binding(config, "uart_qr_detect", "2", TASK_CAMERA_ID, "qr_detect");
+    insert_uart_binding(config, "uart_cross_detect", "3", ROAD_CAMERA_ID, "cross");
     insert_uart_binding(
         config,
         "uart_black_ring_detect",
         "4",
-        CAMERA_ID,
+        ROAD_CAMERA_ID,
         "black_ring_detect",
     );
     insert_uart_binding(
         config,
         "uart_letter_detect",
         "5",
-        CAMERA_ID,
+        ROAD_CAMERA_ID,
         "letter_detect",
     );
     config.bindings_mut().insert(
@@ -328,8 +346,21 @@ mod tests {
             rubo_engine::config::ConfigStore::load_active_config("config/raspberrypi").unwrap(),
             config
         );
-        assert_eq!(config.devices().len(), 1);
-        assert!(config.devices().contains_key(CAMERA_ID));
+        assert_eq!(config.devices().len(), 2);
+        assert!(config.devices().contains_key("task"));
+        assert!(config.devices().contains_key("road"));
+        assert_eq!(
+            config.devices()["task"]
+                .get_or("path", String::new())
+                .unwrap(),
+            "/dev/v4l/by-path/platform-xhci-hcd.1-usb-0:2:1.0-video-index0"
+        );
+        assert_eq!(
+            config.devices()["road"]
+                .get_or("path", String::new())
+                .unwrap(),
+            "/dev/v4l/by-path/platform-xhci-hcd.0-usb-0:2:1.0-video-index0"
+        );
         assert_eq!(
             config.sinks()[GPIO_SINK_ID]
                 .get_or("chip", u8::MAX)
@@ -357,7 +388,15 @@ mod tests {
             "uart_letter_detect",
         ] {
             assert!(config.bindings()[id].debug_enabled());
-            assert_eq!(config.bindings()[id].devices(), &[CAMERA_ID.to_string()]);
+            let expected_device = if id == "uart_qr_detect" {
+                "task"
+            } else {
+                "road"
+            };
+            assert_eq!(
+                config.bindings()[id].devices(),
+                &[expected_device.to_string()]
+            );
         }
         let uart_letter = &config.bindings()["uart_letter_detect"];
         assert_eq!(uart_letter.source_ref().id(), UART_SOURCE_ID);
@@ -420,7 +459,7 @@ mod tests {
             3
         );
         assert_eq!(
-            orangepi.devices()[CAMERA_ID]
+            orangepi.devices()[ROAD_CAMERA_ID]
                 .get_or("path", String::new())
                 .unwrap(),
             "/dev/video0"

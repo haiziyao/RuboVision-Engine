@@ -352,7 +352,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_letter() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("road")
             .await
             .expect("load letter camera");
         let camera = camera.get::<CameraDevice>().expect("get letter camera");
@@ -366,7 +366,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_letter_show() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("road")
             .await
             .expect("load letter camera");
         let camera = camera.get::<CameraDevice>().expect("get letter camera");

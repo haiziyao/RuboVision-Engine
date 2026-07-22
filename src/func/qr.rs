@@ -165,7 +165,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_qr() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("task")
             .await
             .expect("load qr camera");
         let camera = camera.get::<CameraDevice>().expect("get qr camera");
@@ -177,7 +177,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_qr_show() {
-        let (config, camera) = crate::vision::test::load_camera("camera")
+        let (config, camera) = crate::vision::test::load_camera("task")
             .await
             .expect("load qr camera");
         let camera = camera.get::<CameraDevice>().expect("get qr camera");

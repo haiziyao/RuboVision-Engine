@@ -1,6 +1,6 @@
 [black_ring_detect]
 black_threshold = 90
-device_id = "camera"
+device_id = "road"
 max_frames = 3
 max_radius = 180.0
 min_circularity = 0.65
@@ -12,7 +12,7 @@ x = 0
 y = 0
 
 [color_detect]
-device_id = "camera"
+device_id = "road"
 max_frames = 30
 confirm_frames = 5
 radius_ratio = 0.4
@@ -53,7 +53,7 @@ hsv_ranges = [
 black_threshold = 90
 center_tolerance = 14.0
 close_kernel_size = 5
-device_id = "camera"
+device_id = "road"
 dilate_iterations = 1
 dilate_kernel_size = 3
 max_frames = 3
@@ -72,10 +72,10 @@ message = "debug"
 [letter_detect]
 black_threshold = 90
 confirm_frames = 3
-device_id = "camera"
+device_id = "road"
 max_frames = 30
 min_letter_area_ratio = 0.05
 
 [qr_detect]
-device_id = "camera"
+device_id = "task"
 max_frames = 30

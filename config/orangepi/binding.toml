@@ -23,7 +23,7 @@ id = "uart"
 
 [uart_black_ring_detect]
 debug = true
-devices = ["camera"]
+devices = ["road"]
 function = "black_ring_detect"
 sinks = [
     "web",
@@ -36,7 +36,7 @@ id = "uart"
 
 [uart_color_detect]
 debug = true
-devices = ["camera"]
+devices = ["road"]
 function = "color_detect"
 sinks = [
     "web",
@@ -49,7 +49,7 @@ id = "uart"
 
 [uart_cross_detect]
 debug = true
-devices = ["camera"]
+devices = ["road"]
 function = "cross"
 sinks = [
     "web",
@@ -62,7 +62,7 @@ id = "uart"
 
 [uart_letter_detect]
 debug = true
-devices = ["camera"]
+devices = ["road"]
 function = "letter_detect"
 sinks = [
     "web",
@@ -75,7 +75,7 @@ id = "uart"
 
 [uart_qr_detect]
 debug = true
-devices = ["camera"]
+devices = ["task"]
 function = "qr_detect"
 sinks = [
     "web",

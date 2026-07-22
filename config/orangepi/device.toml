@@ -1,3 +1,7 @@
-[camera]
+[road]
+kind = "camera"
+path = "/dev/video0"
+
+[task]
 kind = "camera"
 path = "/dev/video0"
